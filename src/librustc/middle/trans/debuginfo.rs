@@ -2521,6 +2521,11 @@ fn populate_scope_map(cx: &mut CrateContext,
                 None => ()
             },
 
+            ast::ExprYield(exp_opt) => match exp_opt {
+                Some(@ref sub_exp) => walk_expr(cx, sub_exp, scope_stack, scope_map),
+                None => ()
+            },
+
             ast::ExprUnary(node_id, _, @ref sub_exp) => {
                 scope_map.insert(node_id, scope_stack.last().scope_metadata);
                 walk_expr(cx, sub_exp, scope_stack, scope_map);
@@ -2571,7 +2576,7 @@ fn populate_scope_map(cx: &mut CrateContext,
                     walk_block(cx, loop_body, scope_stack, scope_map);
                 }
             }
-
+            
             ast::ExprForLoop(_, _, _, _) => {
                 cx.sess.span_bug(exp.span, "debuginfo::populate_scope_map() - \
                                             Found unexpanded for-loop.");

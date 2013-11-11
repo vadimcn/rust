@@ -535,7 +535,7 @@ fn visit_expr(v: &mut LivenessVisitor, expr: @Expr, this: @mut IrMaps) {
       ExprCall(*) | ExprMethodCall(*) | ExprTup(*) | ExprLogLevel |
       ExprBinary(*) | ExprAddrOf(*) |
       ExprDoBody(*) | ExprCast(*) | ExprUnary(*) | ExprBreak(_) |
-      ExprAgain(_) | ExprLit(_) | ExprRet(*) | ExprBlock(*) |
+      ExprAgain(_) | ExprLit(_) | ExprRet(*) | ExprYield(*) | ExprBlock(*) |
       ExprAssign(*) | ExprAssignOp(*) | ExprMac(*) |
       ExprStruct(*) | ExprRepeat(*) | ExprParen(*) |
       ExprInlineAsm(*) => {
@@ -1115,6 +1115,10 @@ impl Liveness {
             // ignore succ and subst exit_ln:
             self.propagate_through_opt_expr(o_e, self.s.exit_ln)
           }
+          
+          ExprYield(o_e) => {
+            self.propagate_through_opt_expr(o_e, succ)
+          }
 
           ExprBreak(opt_label) => {
               // Find which label this break jumps to
@@ -1496,8 +1500,8 @@ fn check_expr(this: &mut Liveness, expr: @Expr) {
       ExprWhile(*) | ExprLoop(*) | ExprIndex(*) | ExprField(*) |
       ExprVstore(*) | ExprVec(*) | ExprTup(*) | ExprLogLevel |
       ExprBinary(*) | ExprDoBody(*) |
-      ExprCast(*) | ExprUnary(*) | ExprRet(*) | ExprBreak(*) |
-      ExprAgain(*) | ExprLit(_) | ExprBlock(*) |
+      ExprCast(*) | ExprUnary(*) | ExprRet(*) | ExprYield(*) |
+      ExprBreak(*) | ExprAgain(*) | ExprLit(_) | ExprBlock(*) |
       ExprMac(*) | ExprAddrOf(*) | ExprStruct(*) | ExprRepeat(*) |
       ExprParen(*) | ExprFnBlock(*) | ExprProc(*) | ExprPath(*) |
       ExprSelf(*) => {

@@ -28,7 +28,7 @@ use ast::{ExprBreak, ExprCall, ExprCast, ExprDoBody};
 use ast::{ExprField, ExprFnBlock, ExprIf, ExprIndex};
 use ast::{ExprLit, ExprLogLevel, ExprLoop, ExprMac};
 use ast::{ExprMethodCall, ExprParen, ExprPath, ExprProc, ExprRepeat};
-use ast::{ExprRet, ExprSelf, ExprStruct, ExprTup, ExprUnary};
+use ast::{ExprRet, ExprSelf, ExprStruct, ExprTup, ExprUnary, ExprYield};
 use ast::{ExprVec, ExprVstore, ExprVstoreMutBox};
 use ast::{ExprVstoreSlice, ExprVstoreBox};
 use ast::{ExprVstoreMutSlice, ExprWhile, ExprForLoop, extern_fn, Field, fn_decl};
@@ -1881,6 +1881,13 @@ impl Parser {
                 hi = e.span.hi;
                 ex = ExprRet(Some(e));
             } else { ex = ExprRet(None); }
+        } else if self.eat_keyword(keywords::Yield) {
+            // YIELD expression
+            if can_begin_expr(&*self.token) {
+                let e = self.parse_expr();
+                hi = e.span.hi;
+                ex = ExprYield(Some(e));
+            } else { ex = ExprYield(None); }
         } else if self.eat_keyword(keywords::Break) {
             // BREAK expression
             if self.token_is_lifetime(&*self.token) {

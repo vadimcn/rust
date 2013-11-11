@@ -526,6 +526,12 @@ impl VisitContext {
                     self.consume_expr(*expr);
                 }
             }
+            
+            ExprYield(ref opt_expr) => {
+                for expr in opt_expr.iter() {
+                    self.consume_expr(*expr);
+                }
+            }
 
             ExprAssign(lhs, rhs) => {
                 self.use_expr(lhs, Read);

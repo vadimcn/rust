@@ -1023,6 +1023,7 @@ pub mod guarantor {
             ast::ExprBreak(*) |
             ast::ExprAgain(*) |
             ast::ExprRet(*) |
+            ast::ExprYield(*) |
             ast::ExprLogLevel |
             ast::ExprWhile(*) |
             ast::ExprLoop(*) |

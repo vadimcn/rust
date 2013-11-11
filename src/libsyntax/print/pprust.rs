@@ -1444,6 +1444,13 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
           _ => ()
         }
       }
+      ast::ExprYield(result) => {
+        word(s.s, "yield");
+        match result {
+          Some(expr) => { word(s.s, " "); print_expr(s, expr); }
+          _ => ()
+        }
+      }
       ast::ExprLogLevel => {
         word(s.s, "__log_level");
         popen(s);

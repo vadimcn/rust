@@ -3152,6 +3152,7 @@ pub fn expr_kind(tcx: ctxt,
         ast::ExprBreak(*) |
         ast::ExprAgain(*) |
         ast::ExprRet(*) |
+        ast::ExprYield(*) |
         ast::ExprWhile(*) |
         ast::ExprLoop(*) |
         ast::ExprAssign(*) |

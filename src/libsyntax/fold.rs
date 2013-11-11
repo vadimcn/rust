@@ -844,6 +844,9 @@ pub fn noop_fold_expr<T:ast_fold>(e: @ast::Expr, folder: &T) -> @ast::Expr {
         ExprRet(ref e) => {
             ExprRet(e.map(|x| folder.fold_expr(x)))
         }
+        ExprYield(ref e) => {
+            ExprYield(e.map(|x| folder.fold_expr(x)))
+        }
         ExprInlineAsm(ref a) => {
             ExprInlineAsm(inline_asm {
                 inputs: a.inputs.map(|&(c, input)| (c, folder.fold_expr(input))),

@@ -633,6 +633,11 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 self.reset(in_out);
             }
 
+            ast::ExprYield(o_e) => {
+                self.walk_opt_expr(o_e, in_out, loop_scopes);
+                self.reset(in_out);
+            }
+            
             ast::ExprBreak(label) => {
                 let scope = self.find_scope(expr, label, loop_scopes);
                 self.break_from_to(expr, scope, in_out);

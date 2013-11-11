@@ -572,6 +572,7 @@ pub enum Expr_ {
     ExprBreak(Option<Name>),
     ExprAgain(Option<Name>),
     ExprRet(Option<@Expr>),
+    ExprYield(Option<@Expr>),
 
     /// Gets the log level for the enclosing module
     ExprLogLevel,
@@ -587,7 +588,7 @@ pub enum Expr_ {
     ExprRepeat(@Expr /* element */, @Expr /* count */, Mutability),
 
     // No-op: used solely so we can pretty-print faithfully
-    ExprParen(@Expr)
+    ExprParen(@Expr), 
 }
 
 // When the main rust parser encounters a syntax-extension invocation, it
