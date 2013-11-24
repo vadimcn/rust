@@ -562,7 +562,8 @@ impl VisitContext {
             }
 
             ExprFnBlock(ref decl, ref body) |
-            ExprProc(ref decl, ref body) => {
+            ExprProc(ref decl, ref body) |
+            ExprCoro(ref decl, ref body) => {
                 for a in decl.inputs.iter() {
                     self.use_pat(a.pat);
                 }

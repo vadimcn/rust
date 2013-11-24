@@ -27,7 +27,7 @@ use ast::{ExprAssign, ExprAssignOp, ExprBinary, ExprBlock};
 use ast::{ExprBreak, ExprCall, ExprCast, ExprDoBody};
 use ast::{ExprField, ExprFnBlock, ExprIf, ExprIndex};
 use ast::{ExprLit, ExprLogLevel, ExprLoop, ExprMac};
-use ast::{ExprMethodCall, ExprParen, ExprPath, ExprProc, ExprRepeat};
+use ast::{ExprMethodCall, ExprParen, ExprPath, ExprProc, ExprCoro, ExprRepeat};
 use ast::{ExprRet, ExprSelf, ExprStruct, ExprTup, ExprUnary, ExprYield};
 use ast::{ExprVec, ExprVstore, ExprVstoreMutBox};
 use ast::{ExprVstoreSlice, ExprVstoreBox};
@@ -1793,6 +1793,19 @@ impl Parser {
             };
 
             return self.mk_expr(lo, body.span.hi, ExprProc(decl, fakeblock));
+        } else if self.eat_keyword(keywords::Coro) {
+            let decl = self.parse_proc_decl();
+            let body = self.parse_expr();
+            let fakeblock = ast::Block {
+                view_items: ~[],
+                stmts: ~[],
+                expr: Some(body),
+                id: ast::DUMMY_NODE_ID,
+                rules: DefaultBlock,
+                span: body.span,
+            };
+
+            return self.mk_expr(lo, body.span.hi, ExprCoro(decl, fakeblock));
         } else if self.eat_keyword(keywords::Self) {
             ex = ExprSelf;
             hi = self.span.hi;

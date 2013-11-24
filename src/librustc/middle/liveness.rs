@@ -485,7 +485,7 @@ fn visit_expr(v: &mut LivenessVisitor, expr: @Expr, this: @mut IrMaps) {
         }
         visit::walk_expr(v, expr, this);
       }
-      ExprFnBlock(*) | ExprProc(*) => {
+      ExprFnBlock(*) | ExprProc(*) | ExprCoro(*) => {
         // Interesting control flow (for loops can contain labeled
         // breaks or continues)
         this.add_live_node_for_node(expr.id, ExprNode(expr.span));
@@ -1023,7 +1023,7 @@ impl Liveness {
               self.propagate_through_expr(e, succ)
           }
 
-          ExprFnBlock(_, ref blk) | ExprProc(_, ref blk) => {
+          ExprFnBlock(_, ref blk) | ExprProc(_, ref blk) | ExprCoro(_, ref blk) => {
               debug!("{} is an ExprFnBlock or ExprProc",
                    expr_to_str(expr, self.tcx.sess.intr()));
 
@@ -1504,7 +1504,7 @@ fn check_expr(this: &mut Liveness, expr: @Expr) {
       ExprBreak(*) | ExprAgain(*) | ExprLit(_) | ExprBlock(*) |
       ExprMac(*) | ExprAddrOf(*) | ExprStruct(*) | ExprRepeat(*) |
       ExprParen(*) | ExprFnBlock(*) | ExprProc(*) | ExprPath(*) |
-      ExprSelf(*) => {
+      ExprSelf(*) | ExprCoro(*) => {
         visit::walk_expr(this, expr, ());
       }
       ExprForLoop(*) => fail!("non-desugared expr_for_loop")

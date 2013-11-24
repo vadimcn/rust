@@ -173,7 +173,10 @@ pub enum FnKind {
     DoBlock,
 
     // A normal closure or fn item.
-    Vanilla
+    Vanilla,
+
+    // Coroutine closure
+    Coroutine
 }
 
 #[deriving(Clone)]
@@ -475,17 +478,26 @@ pub fn check_fn(ccx: @mut CrateCtxt,
 
     // We unify the tail expr's type with the
     // function result type, if there is a tail expr.
-    match body.expr {
-      Some(tail_expr) => {
-        let tail_expr_ty = fcx.expr_ty(tail_expr);
-        // Special case: we print a special error if there appears
-        // to be do-block/for-loop confusion
-        demand::suptype_with_fn(fcx, tail_expr.span, false,
-            fcx.ret_ty, tail_expr_ty,
-            |sp, e, a, s| {
-                fcx.report_mismatched_return_types(sp, e, a, s) });
+    match fcx.fn_kind {
+      DoBlock | Vanilla => {
+        match body.expr {
+          Some(tail_expr) => {
+            let tail_expr_ty = fcx.expr_ty(tail_expr);
+            // Special case: we print a special error if there appears
+            // to be do-block/for-loop confusion
+            demand::suptype_with_fn(fcx, tail_expr.span, false,
+                fcx.ret_ty, tail_expr_ty,
+                |sp, e, a, s| {
+                    fcx.report_mismatched_return_types(sp, e, a, s) });
+          }
+          None => ()
+        }
+      },
+      // For coroutines, however, we unify function result type 
+      // with Return(<tail expr type>)
+      Coroutine => {
+        check_coroutine_result(fcx, id, body.span, body.expr, true);
       }
-      None => ()
     }
 
     for self_info in opt_self_info.iter() {
@@ -1748,6 +1760,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                 let is_block = match arg.node {
                     ast::ExprFnBlock(*) |
                     ast::ExprProc(*) |
+                    ast::ExprCoro(*) |
                     ast::ExprDoBody(*) => true,
                     _ => false
                 };
@@ -2830,22 +2843,32 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
       ast::ExprBreak(_) => { fcx.write_bot(id); }
       ast::ExprAgain(_) => { fcx.write_bot(id); }
       ast::ExprRet(expr_opt) => {
-        let ret_ty = fcx.ret_ty;
-        match expr_opt {
-          None => match fcx.mk_eqty(false, infer::Misc(expr.span),
-                                    ret_ty, ty::mk_nil()) {
-            result::Ok(_) => { /* fall through */ }
-            result::Err(_) => {
-                tcx.sess.span_err(
-                    expr.span,
-                    "`return;` in function returning non-nil");
+        match fcx.fn_kind {
+          DoBlock | Vanilla => {
+            let ret_ty = fcx.ret_ty;
+            match expr_opt {
+              None => match fcx.mk_eqty(false, infer::Misc(expr.span),
+                                        ret_ty, ty::mk_nil()) {
+                result::Ok(_) => { /* fall through */ }
+                result::Err(_) => {
+                    tcx.sess.span_err(
+                        expr.span,
+                        "`return;` in function returning non-nil");
+                }
+              },
+              Some(e) => {
+                  check_expr_has_type(fcx, e, ret_ty);
+              }
             }
+            fcx.write_bot(id);
           },
-          Some(e) => {
-              check_expr_has_type(fcx, e, ret_ty);
+          Coroutine => {
+            check_coroutine_result(fcx, id, expr.span, expr_opt, true);
           }
         }
-        fcx.write_bot(id);
+      }
+      ast::ExprYield(expr_opt) => {
+        check_coroutine_result(fcx, id, expr.span, expr_opt, false);
       }
       ast::ExprLogLevel => {
         fcx.write_ty(id, ty::mk_u32())
@@ -2919,6 +2942,10 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                       body,
                       Vanilla,
                       expected);
+      }
+      ast::ExprCoro(ref decl, ref body) => {
+        check_expr_fn(fcx, expr, None,
+                      decl, body, Coroutine, expected);
       }
       ast::ExprDoBody(b) => {
         let expected_sty = unpack_expected(fcx,
@@ -3239,6 +3266,53 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
     unifier();
 }
+
+// Handle 'yield expr' or 'return expr' in a coroutine
+// `is_return` indicates which of the two this is
+fn check_coroutine_result(fcx:@mut FnCtxt,
+                          id: ast::NodeId,
+                          span: codemap::Span,
+                          expr_opt: Option<@ast::Expr>,
+                          is_return: bool) {
+
+    let expr_ty = match expr_opt {
+        Some(expr) => {
+            check_expr(fcx, expr);
+            fcx.expr_ty(expr)
+        },
+        None => ty::mk_nil()
+    };      
+
+    let coresult_ty = ty::get_coresult_ty(fcx.ccx.tcx).unwrap();
+
+    let did = match ty::get(coresult_ty).sty {
+        ty::ty_enum(did, _) => did,
+        _ => fail!("CoResult is not an enum")
+    };
+
+    let var_id = fcx.infcx().next_ty_var_id();
+    let infer_ty = ty::mk_var(fcx.tcx(), var_id);
+
+    // We assume that Yield is the first variant of CoResult 
+    // and that Return is the second one.
+    let tps = match is_return {
+        false => ~[expr_ty, infer_ty],
+        true =>  ~[infer_ty, expr_ty],
+    };
+
+    let substs = ty::substs {
+        self_ty: None,
+        regions: ty::ErasedRegions,
+        tps: tps,
+    };
+
+    let result_ty = ty::mk_enum(fcx.tcx(), did, substs);
+
+    fcx.mk_eqty(false, infer::Misc(span), fcx.ret_ty, result_ty);
+
+    fcx.write_ty(id, result_ty);
+}
+
 
 pub fn require_integral(fcx: @mut FnCtxt, sp: Span, t: ty::t) {
     if !type_is_integral(fcx, sp, t) {

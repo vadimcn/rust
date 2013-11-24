@@ -196,6 +196,10 @@ pub mod routine;
 pub mod mem;
 
 
+/* Coroutines */
+pub mod coroutine;
+
+
 /* Unsupported interfaces */
 
 // Private APIs

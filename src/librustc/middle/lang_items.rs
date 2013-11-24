@@ -82,16 +82,18 @@ pub enum LangItem {
     OpaqueStructLangItem,              // 38
 
     EventLoopFactoryLangItem,          // 39
+
+    CoResultTypeLangItem,              // 40
 }
 
 pub struct LanguageItems {
-    items: [Option<ast::DefId>, ..40]
+    items: [Option<ast::DefId>, ..41]
 }
 
 impl LanguageItems {
     pub fn new() -> LanguageItems {
         LanguageItems {
-            items: [ None, ..40 ]
+            items: [ None, ..41 ]
         }
     }
 
@@ -147,6 +149,8 @@ impl LanguageItems {
             38 => "opaque",
 
             39 => "event_loop_factory",
+
+            40 => "coresult",
 
             _ => "???"
         }
@@ -298,6 +302,9 @@ impl LanguageItems {
     pub fn event_loop_factory(&self) -> Option<ast::DefId> {
         self.items[EventLoopFactoryLangItem as uint]
     }
+    pub fn coresult(&self) -> Option<ast::DefId> {
+        self.items[CoResultTypeLangItem as uint]
+    }
 }
 
 struct LanguageItemCollector {
@@ -314,8 +321,10 @@ struct LanguageItemVisitor<'self> {
 
 impl<'self> Visitor<()> for LanguageItemVisitor<'self> {
     fn visit_item(&mut self, item: @ast::item, _: ()) {
+        debug!("lang_items: visit_item");
         match extract(item.attrs) {
             Some(value) => {
+                debug!("lang_items: Found {}", value);
                 let item_index = self.this.item_refs.find_equiv(&value).map(|x| *x);
 
                 match item_index {
@@ -382,6 +391,7 @@ impl LanguageItemCollector {
         item_refs.insert("ty_visitor", TyVisitorTraitLangItem as uint);
         item_refs.insert("opaque", OpaqueStructLangItem as uint);
         item_refs.insert("event_loop_factory", EventLoopFactoryLangItem as uint);
+        item_refs.insert("coresult", CoResultTypeLangItem as uint);
 
         LanguageItemCollector {
             session: session,

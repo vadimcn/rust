@@ -72,6 +72,7 @@ impl visit::Visitor<()> for CollectItemTypesVisitor {
 }
 
 pub fn collect_item_types(ccx: @mut CrateCtxt, crate: &ast::Crate) {
+
     fn collect_intrinsic_type(ccx: &CrateCtxt,
                               lang_item: ast::DefId) {
         let ty::ty_param_bounds_and_ty { ty: ty, _ } =
@@ -85,6 +86,9 @@ pub fn collect_item_types(ccx: @mut CrateCtxt, crate: &ast::Crate) {
     match ccx.tcx.lang_items.opaque() {
         Some(id) => { collect_intrinsic_type(ccx, id); } None => {}
     }
+    match ccx.tcx.lang_items.coresult() {
+        Some(id) => { collect_intrinsic_type(ccx, id); } None => {}
+    }    
 
     let mut visitor = CollectItemTypesVisitor{ ccx: ccx };
     visit::walk_crate(&mut visitor, crate, ());

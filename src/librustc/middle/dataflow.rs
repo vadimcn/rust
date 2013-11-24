@@ -519,6 +519,15 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 }
             }
 
+            ast::ExprCoro(ref decl, ref body) => {
+                if self.dfcx.oper.walk_closures() {
+                    for input in decl.inputs.iter() {
+                        self.walk_pat(input.pat, in_out, loop_scopes);
+                    }
+                    self.walk_block(body, in_out, loop_scopes);
+                }
+            }
+
             ast::ExprIf(cond, ref then, els) => {
                 //
                 //     (cond)
@@ -635,7 +644,6 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
 
             ast::ExprYield(o_e) => {
                 self.walk_opt_expr(o_e, in_out, loop_scopes);
-                self.reset(in_out);
             }
             
             ast::ExprBreak(label) => {

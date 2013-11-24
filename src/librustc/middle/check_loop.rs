@@ -17,7 +17,7 @@ use syntax::visit;
 
 #[deriving(Clone, Eq)]
 enum Context {
-    Normal, Loop, Closure
+    Normal, Loop, Closure, Coroutine
 }
 
 struct CheckLoopVisitor {
@@ -45,11 +45,20 @@ impl Visitor<Context> for CheckLoopVisitor {
             ast::ExprFnBlock(_, ref b) | ast::ExprProc(_, ref b) => {
                 self.visit_block(b, Closure);
             }
+            ast::ExprCoro(_, ref b) => {
+                self.visit_block(b, Coroutine);
+            }
             ast::ExprBreak(_) => self.require_loop("break", cx, e.span),
             ast::ExprAgain(_) => self.require_loop("continue", cx, e.span),
             ast::ExprRet(oe) => {
                 if cx == Closure {
                     self.tcx.sess.span_err(e.span, "`return` in a closure");
+                }
+                visit::walk_expr_opt(self, oe, cx);
+            }
+            ast::ExprYield(oe) => {
+                if cx != Coroutine {
+                    self.tcx.sess.span_err(e.span, "`yield` outside of coroutine");
                 }
                 visit::walk_expr_opt(self, oe, cx);
             }
@@ -62,7 +71,7 @@ impl CheckLoopVisitor {
     fn require_loop(&self, name: &str, cx: Context, span: Span) {
         match cx {
             Loop => {}
-            Closure => {
+            Closure | Coroutine => {
                 self.tcx.sess.span_err(span, format!("`{}` inside of a closure",
                                                      name));
             }

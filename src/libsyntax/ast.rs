@@ -553,6 +553,7 @@ pub enum Expr_ {
     ExprMatch(@Expr, ~[Arm]),
     ExprFnBlock(fn_decl, Block),
     ExprProc(fn_decl, Block),
+    ExprCoro(fn_decl, Block),
     ExprDoBody(@Expr),
     ExprBlock(Block),
 

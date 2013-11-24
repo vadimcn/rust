@@ -334,6 +334,14 @@ impl CFGBuilder {
                 self.add_node(expr.id, [])
             }
 
+            ast::ExprYield(v) => {
+                let v_exit = self.opt_expr(v, pred);
+                let loop_scope = self.loop_scopes[0];
+                self.add_exiting_edge(expr, v_exit,
+                                      loop_scope, loop_scope.break_index);
+                self.add_node(expr.id, [])
+            }
+
             ast::ExprBreak(label) => {
                 let loop_scope = self.find_scope(expr, label);
                 self.add_exiting_edge(expr, pred,
@@ -410,6 +418,7 @@ impl CFGBuilder {
             ast::ExprSelf |
             ast::ExprFnBlock(*) |
             ast::ExprProc(*) |
+            ast::ExprCoro(*) |
             ast::ExprLit(*) |
             ast::ExprPath(*) => {
                 self.straightline(expr, pred, [])

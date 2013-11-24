@@ -14,7 +14,7 @@ use metadata::csearch;
 use metadata;
 use middle::const_eval;
 use middle::lang_items::{TyDescStructLangItem, TyVisitorTraitLangItem};
-use middle::lang_items::OpaqueStructLangItem;
+use middle::lang_items::{OpaqueStructLangItem, CoResultTypeLangItem};
 use middle::freevars;
 use middle::resolve;
 use middle::resolve_lifetime;
@@ -3113,6 +3113,7 @@ pub fn expr_kind(tcx: ctxt,
         ast::ExprMatch(*) |
         ast::ExprFnBlock(*) |
         ast::ExprProc(*) |
+        ast::ExprCoro(*) |
         ast::ExprDoBody(*) |
         ast::ExprBlock(*) |
         ast::ExprRepeat(*) |
@@ -4402,6 +4403,13 @@ pub fn get_opaque_ty(tcx: ctxt) -> Result<t, ~str> {
     do tcx.lang_items.require(OpaqueStructLangItem).map |opaque_lang_item| {
         tcx.intrinsic_defs.find_copy(&opaque_lang_item)
             .expect("Failed to resolve Opaque")
+    }
+}
+
+pub fn get_coresult_ty(tcx: ctxt) -> Result<t, ~str> {
+    do tcx.lang_items.require(CoResultTypeLangItem).map |coresult_lang_item| {
+        tcx.intrinsic_defs.find_copy(&coresult_lang_item)
+            .expect("Failed to resolve CoResult")
     }
 }
 

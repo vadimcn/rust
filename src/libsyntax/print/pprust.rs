@@ -1357,7 +1357,7 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
         // we are inside.
         //
         // if !decl.inputs.is_empty() {
-        print_proc_args(s, decl);
+        print_proc_args(s, "proc", decl);
         space(s.s);
         // }
         assert!(body.stmts.is_empty());
@@ -1378,6 +1378,28 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
         // empty box to satisfy the close.
         ibox(s, 0);
       }
+      ast::ExprCoro(ref decl, ref body) => {
+        print_proc_args(s, "coro", decl);
+        space(s.s);
+
+        assert!(body.stmts.is_empty());
+        assert!(body.expr.is_some());
+        // we extract the block, so as not to create another set of boxes
+        match body.expr.unwrap().node {
+            ast::ExprBlock(ref blk) => {
+                print_block_unclosed(s, blk);
+            }
+            _ => {
+                // this is a bare expression
+                print_expr(s, body.expr.unwrap());
+                end(s); // need to close a box
+            }
+        }
+        // a box will be closed by print_expr, but we didn't want an overall
+        // wrapper so we closed the corresponding opening. so create an
+        // empty box to satisfy the close.
+        ibox(s, 0);
+      }      
       ast::ExprDoBody(body) => {
         print_expr(s, body);
       }
@@ -1828,8 +1850,8 @@ pub fn print_fn_block_args(s: @ps, decl: &ast::fn_decl) {
     maybe_print_comment(s, decl.output.span.lo);
 }
 
-pub fn print_proc_args(s: @ps, decl: &ast::fn_decl) {
-    word(s.s, "proc");
+pub fn print_proc_args(s: @ps, what: &str, decl: &ast::fn_decl) {
+    word(s.s, what);
     word(s.s, "(");
     print_fn_args(s, decl, None);
     word(s.s, ")");
