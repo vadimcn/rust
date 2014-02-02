@@ -90,6 +90,17 @@ pub enum Attribute {
     ReturnsTwiceAttribute = 1 << 29,
     UWTableAttribute = 1 << 30,
     NonLazyBindAttribute = 1 << 31,
+    SanitizeAddressAttribute = 1 << 32,
+    MinSizeAttribute = 1 << 33,
+    NoDuplicateAttribute = 1 << 34,
+    StackProtectStrongAttribute = 1 << 35,
+    SanitizeThreadAttribute = 1 << 36,
+    SanitizeMemoryAttribute = 1 << 37,
+    NoBuiltinAttribute = 1 << 38,
+    ReturnedAttribute = 1 << 39,
+    ColdAttribute = 1 << 40,
+    BuiltinAttribute = 1 << 41,
+    OptimizeNoneAttribute = 1 << 42,
 }
 
 // enum for the LLVM IntPredicate type
@@ -714,6 +725,8 @@ pub mod llvm {
         pub fn LLVMRemoveReturnAttribute(Fn: ValueRef, PA: c_uint);
 
         pub fn LLVMAddColdAttribute(Fn: ValueRef);
+
+        pub fn LLVMAddSanitizeAddressttribute(Fn: ValueRef);
 
         pub fn LLVMRemoveFunctionAttr(Fn: ValueRef,
                                       PA: c_ulonglong,

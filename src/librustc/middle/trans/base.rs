@@ -288,6 +288,10 @@ pub fn decl_rust_fn(ccx: &CrateContext, has_env: bool,
         }
     }
 
+    unsafe {
+        llvm::LLVMAddSanitizeAddressttribute(llfn);
+    }
+
     llfn
 }
 

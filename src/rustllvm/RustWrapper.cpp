@@ -96,6 +96,12 @@ extern "C" void LLVMAddColdAttribute(LLVMValueRef Fn) {
   A->addAttribute(AttributeSet::FunctionIndex, Attribute::Cold);
 }
 
+extern "C" void LLVMAddSanitizeAddressttribute(LLVMValueRef Fn) {
+  Function *A = unwrap<Function>(Fn);
+  A->addAttribute(AttributeSet::FunctionIndex, Attribute::SanitizeAddress);
+}
+
+
 extern "C" LLVMValueRef LLVMBuildAtomicLoad(LLVMBuilderRef B,
                                             LLVMValueRef source,
                                             const char* Name,
