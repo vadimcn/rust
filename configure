@@ -1147,6 +1147,9 @@ do
             LLVM_LDFLAGS=$LLVM_LDFLAGS_32
         fi
 
+        LLVM_CFLAGS="$LLVM_CFLAGS -flto -ffat-lto-objects"
+        LLVM_CXXFLAGS="$LLVM_CXXFLAGS -flto -ffat-lto-objects"
+
         CXX=$LLVM_CXX
         CC=$LLVM_CC
         CFLAGS=$LLVM_CFLAGS
