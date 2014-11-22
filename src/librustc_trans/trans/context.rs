@@ -899,5 +899,14 @@ fn declare_intrinsic(ccx: &CrateContext, key: & &'static str) -> Option<ValueRef
         ifn!("llvm.dbg.declare" fn(Type::metadata(ccx), Type::metadata(ccx)) -> void);
         ifn!("llvm.dbg.value" fn(Type::metadata(ccx), t_i64, Type::metadata(ccx)) -> void);
     }
+
+    if ccx.sess().alt_unwind() {
+        if *key == "llvm.experimental.stackmap" {
+            let f = base::decl_cdecl_fn(ccx, "llvm.experimental.stackmap",
+                              Type::variadic_func(&[t_i64, t_i32], &void), ty::mk_nil(ccx.tcx()));
+            ccx.intrinsics().borrow_mut().insert("llvm.experimental.stackmap", f.clone());
+            return Some(f);
+        }
+    }
     return None;
 }

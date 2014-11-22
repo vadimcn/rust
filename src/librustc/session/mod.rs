@@ -200,6 +200,9 @@ impl Session {
             config::host_triple(),
             &self.opts.addl_lib_search_paths)
     }
+    pub fn alt_unwind(&self) -> bool {
+        self.debugging_opt(config::ALT_UNWIND)
+    }
 }
 
 pub fn build_session(sopts: config::Options,
