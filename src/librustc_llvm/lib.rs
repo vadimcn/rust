@@ -244,6 +244,11 @@ impl AttrBuilder {
         self
     }
 
+    pub fn func<'a, T: AttrHelper + 'static>(&'a mut self, a: T) -> &'a mut AttrBuilder {
+        self.attrs.push((FunctionIndex as uint, box a as Box<AttrHelper+'static>));
+        self
+    }
+
     pub fn apply_llfn(&self, llfn: ValueRef) {
         for &(idx, ref attr) in self.attrs.iter() {
             attr.apply_llfn(idx as c_uint, llfn);

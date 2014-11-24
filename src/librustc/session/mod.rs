@@ -179,6 +179,9 @@ impl Session {
     pub fn no_landing_pads(&self) -> bool {
         self.debugging_opt(config::NO_LANDING_PADS)
     }
+    pub fn no_inline_lpads(&self) -> bool {
+        self.debugging_opt(config::NO_INLINE_LPADS)
+    }
     pub fn show_span(&self) -> bool {
         self.debugging_opt(config::SHOW_SPAN)
     }

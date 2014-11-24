@@ -49,10 +49,16 @@ pub fn trans_exchange_free_dyn<'blk, 'tcx>(cx: Block<'blk, 'tcx>, v: ValueRef,
                                            -> Block<'blk, 'tcx> {
     let _icx = push_ctxt("trans_exchange_free");
     let ccx = cx.ccx();
-    callee::trans_lang_call(cx,
+    let res = callee::trans_lang_call(cx,
         langcall(cx, None, "", ExchangeFreeFnLangItem),
         &[PointerCast(cx, v, Type::i8p(ccx)), size, align],
-        Some(expr::Ignore)).bcx
+        Some(expr::Ignore));
+    if cx.is_lpad && cx.sess().no_inline_lpads() {
+        llvm::AttrBuilder::new()
+                           .func(llvm::NoInlineAttribute)
+                           .apply_callsite(res.val);
+    }
+    res.bcx
 }
 
 pub fn trans_exchange_free<'blk, 'tcx>(cx: Block<'blk, 'tcx>, v: ValueRef,
@@ -125,7 +131,13 @@ pub fn drop_ty<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
             None => debuginfo::clear_source_location(bcx.fcx)
         };
 
-        Call(bcx, glue, &[ptr], None);
+        let mut attrs = None;
+        if bcx.is_lpad && bcx.sess().no_inline_lpads(){
+            let mut bldr = llvm::AttrBuilder::new();
+            bldr.func(llvm::NoInlineAttribute);
+            attrs = Some(bldr);
+        }
+        Call(bcx, glue, &[ptr], attrs);
     }
     bcx
 }
@@ -169,6 +181,7 @@ pub fn get_drop_glue<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>, t: Ty<'tcx>) -> Val
         },
     };
 
+    //set_no_inline(glue);
     ccx.drop_glues().borrow_mut().insert(t, glue);
 
     // To avoid infinite recursion, don't `make_drop_glue` until after we've
