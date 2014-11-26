@@ -425,7 +425,7 @@ extern "C" LLVMValueRef LLVMDIBuilderCreateStaticVariable(
         LineNo,
         unwrapDI<DIType>(Ty),
         isLocalToUnit,
-        unwrap(Val),
+        unwrapDI<Constant*>(Val),
         unwrapDI<MDNode*>(Decl)));
 }
 
@@ -492,6 +492,7 @@ extern "C" LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
     return wrap(Builder->insertDeclare(
         unwrap(Val),
         unwrapDI<DIVariable>(VarInfo),
+        DIExpression(nullptr),
         unwrap(InsertAtEnd)));
 }
 
@@ -503,6 +504,7 @@ extern "C" LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
     return wrap(Builder->insertDeclare(
         unwrap(Val),
         unwrapDI<DIVariable>(VarInfo),
+        DIExpression(nullptr),
         unwrap<Instruction>(InsertBefore)));
 }
 
@@ -591,12 +593,12 @@ extern "C" LLVMValueRef LLVMDIBuilderCreateTemplateTypeParameter(
 
 extern "C" LLVMValueRef LLVMDIBuilderCreateOpDeref(LLVMTypeRef IntTy)
 {
-    return LLVMConstInt(IntTy, DIBuilder::OpDeref, true);
+    return LLVMConstInt(IntTy, dwarf::DW_OP_deref, true);
 }
 
 extern "C" LLVMValueRef LLVMDIBuilderCreateOpPlus(LLVMTypeRef IntTy)
 {
-    return LLVMConstInt(IntTy, DIBuilder::OpPlus, true);
+    return LLVMConstInt(IntTy, dwarf::DW_OP_plus, true);
 }
 
 extern "C" LLVMValueRef LLVMDIBuilderCreateComplexVariable(
@@ -613,6 +615,8 @@ extern "C" LLVMValueRef LLVMDIBuilderCreateComplexVariable(
 {
     llvm::ArrayRef<llvm::Value*> addr_ops((llvm::Value**)AddrOps, AddrOpsCount);
 
+    return wrap(llvm::DIVariable());
+/*
     return wrap(Builder->createComplexVariable(
         Tag,
         unwrapDI<DIDescriptor>(Scope),
@@ -623,6 +627,7 @@ extern "C" LLVMValueRef LLVMDIBuilderCreateComplexVariable(
         addr_ops,
         ArgNo
     ));
+*/
 }
 
 extern "C" LLVMValueRef LLVMDIBuilderCreateNameSpace(
@@ -683,9 +688,7 @@ LLVMRustLinkInExternalBitcode(LLVMModuleRef dst, char *bc, size_t len) {
         return false;
     }
 
-    std::string Err;
-    if (Linker::LinkModules(Dst, *Src, Linker::DestroySource, &Err)) {
-        LLVMRustSetLastError(Err.c_str());
+    if (Linker::LinkModules(Dst, *Src, [](const DiagnosticInfo &di){})) {
         return false;
     }
     return true;
@@ -766,7 +769,7 @@ extern "C" const char*
 #if LLVM_VERSION_MINOR >= 6
 LLVMRustArchiveReadSection(OwningBinary<Archive> *ob, char *name, size_t *size) {
 
-    std::unique_ptr<Archive> &ar = ob->getBinary();
+    Archive *ar = ob->getBinary();
 #else
 LLVMRustArchiveReadSection(Archive *ar, char *name, size_t *size) {
 #endif
