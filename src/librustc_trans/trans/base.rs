@@ -51,7 +51,7 @@ use trans::callee;
 use trans::cleanup::CleanupMethods;
 use trans::cleanup;
 use trans::closure;
-use trans::common::{Block, C_bool, C_bytes_in_context, C_i32, C_integral};
+use trans::common::{Block, C_bool, C_bytes_in_context, C_i32, C_i64, C_integral};
 use trans::common::{C_null, C_struct_in_context, C_u64, C_u8, C_uint, C_undef};
 use trans::common::{CrateContext, ExternMap, FunctionContext};
 use trans::common::{NodeInfo, Result};
@@ -994,7 +994,7 @@ pub fn invoke<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
         }
     }
 
-    if need_invoke(bcx) {
+    if need_invoke(bcx) && !bcx.sess().alt_unwind() {
         debug!("invoking {} at {}", llfn, bcx.llbb);
         for &llarg in llargs.iter() {
             debug!("arg: {}", llarg);
@@ -1026,6 +1026,17 @@ pub fn invoke<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
         };
 
         let llresult = Call(bcx, llfn, llargs.as_slice(), Some(attributes));
+
+        if bcx.sess().alt_unwind() {
+            let ccx = bcx.ccx();
+            let stackmap = ccx.get_intrinsic(&"llvm.experimental.stackmap");
+            let mut params = vec![C_i64(ccx, 0), C_i32(ccx, 0)];
+            bcx.fcx.get_cleanup_valuerefs(&mut params);
+            if params.len() > 2 {
+                Call(bcx, stackmap, params.as_slice(), None);
+            }
+        }
+
         return (llresult, bcx);
     }
 }

@@ -103,6 +103,7 @@ pub trait Cleanup<'tcx> {
                    bcx: Block<'blk, 'tcx>,
                    debug_loc: Option<NodeInfo>)
                    -> Block<'blk, 'tcx>;
+    fn get_valueref(&self) -> ValueRef;
 }
 
 pub type CleanupObj<'tcx> = Box<Cleanup<'tcx>+'tcx>;
@@ -488,6 +489,14 @@ impl<'blk, 'tcx> CleanupMethods<'blk, 'tcx> for FunctionContext<'blk, 'tcx> {
          */
 
         self.scopes.borrow().iter().rev().any(|s| s.needs_invoke())
+    }
+
+    fn get_cleanup_valuerefs(&self, v: &mut Vec<ValueRef>) {
+        for s in self.scopes.borrow().iter().rev() {
+            for c  in s.cleanups.iter() {
+                v.push(c.get_valueref());
+            }
+        }
     }
 
     fn get_landing_pad(&'blk self) -> BasicBlockRef {
@@ -992,6 +1001,10 @@ impl<'tcx> Cleanup<'tcx> for DropValue<'tcx> {
         }
         bcx
     }
+
+    fn get_valueref(&self) -> ValueRef {
+        self.val
+    }
 }
 
 #[deriving(Show)]
@@ -1030,6 +1043,10 @@ impl<'tcx> Cleanup<'tcx> for FreeValue<'tcx> {
             }
         }
     }
+
+    fn get_valueref(&self) -> ValueRef {
+        self.ptr
+    }
 }
 
 pub struct FreeSlice {
@@ -1064,6 +1081,10 @@ impl<'tcx> Cleanup<'tcx> for FreeSlice {
             }
         }
     }
+
+    fn get_valueref(&self) -> ValueRef {
+        self.ptr
+    }
 }
 
 pub struct LifetimeEnd {
@@ -1090,6 +1111,10 @@ impl<'tcx> Cleanup<'tcx> for LifetimeEnd {
         apply_debug_loc(bcx.fcx, debug_loc);
         base::call_lifetime_end(bcx, self.ptr);
         bcx
+    }
+
+    fn get_valueref(&self) -> ValueRef {
+        self.ptr
     }
 }
 
@@ -1199,6 +1224,7 @@ pub trait CleanupMethods<'blk, 'tcx> {
                                     cleanup: CleanupObj<'tcx>);
     fn needs_invoke(&self) -> bool;
     fn get_landing_pad(&'blk self) -> BasicBlockRef;
+    fn get_cleanup_valuerefs(&self, v: &mut Vec<ValueRef>);
 }
 
 trait CleanupHelperMethods<'blk, 'tcx> {
