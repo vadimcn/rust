@@ -56,6 +56,12 @@ fn panic_bounds_check(file_line: &(&'static str, uint),
 }
 
 #[cold] #[inline(never)]
+#[lang="panic_int_overflow"]
+fn panic_int_overflow() -> ! {
+    panic!("Integer overflow");
+}
+
+#[cold] #[inline(never)]
 pub fn panic_fmt(fmt: &fmt::Arguments, file_line: &(&'static str, uint)) -> ! {
     #[allow(improper_ctypes)]
     extern {

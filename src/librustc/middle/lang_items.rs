@@ -277,6 +277,7 @@ lets_do_this! {
     // lang item, but do not have it defined.
     PanicFnLangItem,                 "panic",                   panic_fn;
     PanicBoundsCheckFnLangItem,      "panic_bounds_check",      panic_bounds_check_fn;
+    PanicIntOverflowFnLangItem,      "panic_int_overflow",      panic_int_overflow;
     PanicFmtLangItem,                "panic_fmt",               panic_fmt;
 
     ExchangeMallocFnLangItem,        "exchange_malloc",         exchange_malloc_fn;

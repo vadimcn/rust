@@ -41,7 +41,7 @@ use middle::def;
 use middle::mem_categorization::Typer;
 use middle::subst::{mod, Subst};
 use trans::{_match, adt, asm, base, callee, closure, consts, controlflow};
-use trans::{debuginfo, glue, machine, meth, inline, tvec, type_of};
+use trans::{debuginfo, glue, machine, meth, inline, tvec, type_of, expr};
 use trans::base::*;
 use trans::build::*;
 use trans::cleanup::{mod, CleanupMethods};
@@ -50,12 +50,15 @@ use trans::datum::*;
 use middle::ty::{mod, struct_fields, tup_fields};
 use middle::ty::{AdjustDerefRef, AdjustAddEnv, AutoUnsafe, AutoPtr, Ty};
 use middle::typeck::{mod, MethodCall};
+use middle::lang_items;
 use util::common::indenter;
 use util::ppaux::Repr;
 use trans::machine::{llsize_of, llsize_of_alloc};
 use trans::type_::Type;
+use session::config;
 
 use syntax::{ast, ast_util, codemap};
+use syntax::parse::token;
 use syntax::print::pprust::{expr_to_string};
 use syntax::ptr::P;
 use std::rc::Rc;
@@ -1593,6 +1596,89 @@ fn trans_addr_of<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
     }
 }
 
+fn trans_int_op_with_overflow<'blk,'tcx>(bcx: Block<'blk, 'tcx>,
+                                         span: codemap::Span,
+                                         op: ast::BinOp,
+                                         lhs: ValueRef,
+                                         rhs: ValueRef,
+                                         ty: Ty<'tcx>)
+                                         -> (Block<'blk,'tcx>, ValueRef) {
+
+    let is32 = match bcx.sess().target.target.target_word_size.as_slice() {
+        "32" => true,
+        "64" => false,
+        _ => panic!()
+    };
+
+    let intr_name = match (op, &ty.sty) {
+        (ast::BiAdd, &ty::ty_int(ast::TyI)) => if is32 { "llvm.sadd.with.overflow.i32" }
+                                               else    { "llvm.sadd.with.overflow.i64" },
+        (ast::BiAdd, &ty::ty_int(ast::TyI8)) => "llvm.sadd.with.overflow.i8",
+        (ast::BiAdd, &ty::ty_int(ast::TyI16)) => "llvm.sadd.with.overflow.i16",
+        (ast::BiAdd, &ty::ty_int(ast::TyI32)) => "llvm.sadd.with.overflow.i32",
+        (ast::BiAdd, &ty::ty_int(ast::TyI64)) => "llvm.sadd.with.overflow.i64",
+
+        (ast::BiAdd, &ty::ty_uint(ast::TyU)) => if is32 { "llvm.uadd.with.overflow.i32" }
+                                                else    { "llvm.uadd.with.overflow.i64" },
+        (ast::BiAdd, &ty::ty_uint(ast::TyU8)) => "llvm.uadd.with.overflow.i8",
+        (ast::BiAdd, &ty::ty_uint(ast::TyU16)) => "llvm.uadd.with.overflow.i16",
+        (ast::BiAdd, &ty::ty_uint(ast::TyU32)) =>"llvm.uadd.with.overflow.i32",
+        (ast::BiAdd, &ty::ty_uint(ast::TyU64)) =>"llvm.uadd.with.overflow.i64",
+
+        (ast::BiSub, &ty::ty_int(ast::TyI)) => if is32 { "llvm.ssub.with.overflow.i32" }
+                                               else    { "llvm.ssub.with.overflow.i64" },
+        (ast::BiSub, &ty::ty_int(ast::TyI8)) => "llvm.ssub.with.overflow.i8",
+        (ast::BiSub, &ty::ty_int(ast::TyI16)) => "llvm.ssub.with.overflow.i16",
+        (ast::BiSub, &ty::ty_int(ast::TyI32)) => "llvm.ssub.with.overflow.i32",
+        (ast::BiSub, &ty::ty_int(ast::TyI64)) => "llvm.ssub.with.overflow.i64",
+
+        (ast::BiSub, &ty::ty_uint(ast::TyU)) => if is32 { "llvm.usub.with.overflow.i32" }
+                                               else     { "llvm.usub.with.overflow.i64" },
+        (ast::BiSub, &ty::ty_uint(ast::TyU8)) => "llvm.usub.with.overflow.i8",
+        (ast::BiSub, &ty::ty_uint(ast::TyU16)) => "llvm.usub.with.overflow.i16",
+        (ast::BiSub, &ty::ty_uint(ast::TyU32)) =>"llvm.usub.with.overflow.i32",
+        (ast::BiSub, &ty::ty_uint(ast::TyU64)) =>"llvm.usub.with.overflow.i64",
+
+        (ast::BiMul, &ty::ty_int(ast::TyI)) => if is32 { "llvm.smul.with.overflow.i32" }
+                                               else    { "llvm.smul.with.overflow.i64" },
+        (ast::BiMul, &ty::ty_int(ast::TyI8)) => "llvm.smul.with.overflow.i8",
+        (ast::BiMul, &ty::ty_int(ast::TyI16)) => "llvm.smul.with.overflow.i16",
+        (ast::BiMul, &ty::ty_int(ast::TyI32)) => "llvm.smul.with.overflow.i32",
+        (ast::BiMul, &ty::ty_int(ast::TyI64)) => "llvm.smul.with.overflow.i64",
+
+        (ast::BiMul, &ty::ty_uint(ast::TyU)) => if is32 { "llvm.umul.with.overflow.i32" }
+                                                else    { "llvm.umul.with.overflow.i64" },
+        (ast::BiMul, &ty::ty_uint(ast::TyU8)) => "llvm.umul.with.overflow.i8",
+        (ast::BiMul, &ty::ty_uint(ast::TyU16)) => "llvm.umul.with.overflow.i16",
+        (ast::BiMul, &ty::ty_uint(ast::TyU32)) =>"llvm.umul.with.overflow.i32",
+        (ast::BiMul, &ty::ty_uint(ast::TyU64)) =>"llvm.umul.with.overflow.i64",
+
+        _ => panic!()
+    };
+
+    let intr = bcx.ccx().get_intrinsic(&intr_name.as_slice());
+    let res = Call(bcx, intr, &[lhs, rhs], None);
+    let val = ExtractValue(bcx, res, 0);
+    let ovf = ExtractValue(bcx, res, 1);
+    let bcx = with_cond(bcx, ovf, |bcx| {
+        if bcx.sess().debugging_opt(config::CHECKED_INTS_WITH_LOC) {
+            controlflow::trans_fail(bcx, span,
+                                    token::InternedString::new("Integer overflow"))
+
+        } else {
+            let did = langcall(bcx, Some(span), "", lang_items::PanicIntOverflowFnLangItem);
+            let bcx = callee::trans_lang_call(bcx,
+                                              did,
+                                              &[],
+                                              Some(expr::Ignore)).bcx;
+            Unreachable(bcx);
+            bcx
+        }
+    });
+
+    return (bcx, val);
+}
+
 // Important to get types for both lhs and rhs, because one might be _|_
 // and the other not.
 fn trans_eager_binop<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
@@ -1621,15 +1707,36 @@ fn trans_eager_binop<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
     let val = match op {
       ast::BiAdd => {
         if is_float { FAdd(bcx, lhs, rhs) }
-        else { Add(bcx, lhs, rhs) }
+        else if !bcx.fcx.checked_ints {
+            Add(bcx, lhs, rhs)
+        } else {
+            let (new_bcx, val) = trans_int_op_with_overflow(bcx, binop_expr.span,
+                                                            ast::BiAdd, lhs, rhs, intype);
+            bcx = new_bcx;
+            val
+        }
       }
       ast::BiSub => {
         if is_float { FSub(bcx, lhs, rhs) }
-        else { Sub(bcx, lhs, rhs) }
+        else if !bcx.fcx.checked_ints {
+            Sub(bcx, lhs, rhs)
+        } else {
+            let (new_bcx, val) = trans_int_op_with_overflow(bcx, binop_expr.span,
+                                                            ast::BiSub, lhs, rhs, intype);
+            bcx = new_bcx;
+            val
+        }
       }
       ast::BiMul => {
         if is_float { FMul(bcx, lhs, rhs) }
-        else { Mul(bcx, lhs, rhs) }
+        else if !bcx.fcx.checked_ints {
+            Mul(bcx, lhs, rhs)
+        } else {
+            let (new_bcx, val) = trans_int_op_with_overflow(bcx, binop_expr.span,
+                                                            ast::BiMul, lhs, rhs, intype);
+            bcx = new_bcx;
+            val
+        }
       }
       ast::BiDiv => {
         if is_float {

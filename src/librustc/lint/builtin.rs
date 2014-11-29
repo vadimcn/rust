@@ -617,6 +617,7 @@ impl LintPass for UnusedAttributes {
             "thread_local",
             "no_debug",
             "unsafe_no_drop_flag",
+            "unchecked_ints",
 
             // used in resolve
             "prelude_import",

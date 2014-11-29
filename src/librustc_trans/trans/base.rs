@@ -1409,6 +1409,16 @@ fn has_nested_returns(tcx: &ty::ctxt, id: ast::NodeId) -> bool {
     }
 }
 
+fn has_unchecked_ints_attribute(attributes: &[ast::Attribute]) -> bool {
+    attributes.iter().any(|attr| {
+        let meta_item: &ast::MetaItem = &*attr.node.value;
+        match meta_item.node {
+            ast::MetaWord(ref value) => value.get() == "unchecked_ints",
+            _ => false
+        }
+    })
+}
+
 // NB: must keep 4 fns in sync:
 //
 //  - type_of_fn
@@ -1447,6 +1457,20 @@ pub fn new_fn_ctxt<'a, 'tcx>(ccx: &'a CrateContext<'a, 'tcx>,
     let debug_context = debuginfo::create_function_debug_context(ccx, id, param_substs, llfndecl);
     let nested_returns = has_nested_returns(ccx.tcx(), id);
 
+    let attrs = if id == ast::DUMMY_NODE_ID {
+            [].as_slice()
+        } else {
+            let fnitem = ccx.tcx().map.get(id);
+            match fnitem {
+                ast_map::NodeItem(ref item) => item.attrs.as_slice(),
+                ast_map::NodeImplItem(&ast::MethodImplItem(ref method)) => method.attrs.as_slice(),
+                _ => [].as_slice()
+            }
+        };
+    let checked_ints = (ccx.sess().debugging_opt(config::CHECKED_INTS) ||
+                        ccx.sess().debugging_opt(config::CHECKED_INTS_WITH_LOC)) &&
+                        !has_unchecked_ints_attribute(attrs);
+
     let mut fcx = FunctionContext {
           llfn: llfndecl,
           llenv: None,
@@ -1464,7 +1488,8 @@ pub fn new_fn_ctxt<'a, 'tcx>(ccx: &'a CrateContext<'a, 'tcx>,
           block_arena: block_arena,
           ccx: ccx,
           debug_context: debug_context,
-          scopes: RefCell::new(Vec::new())
+          scopes: RefCell::new(Vec::new()),
+          checked_ints: checked_ints,
     };
 
     if has_env {
@@ -1792,6 +1817,7 @@ pub fn trans_closure<'a, 'b, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
                                    param_substs: &Substs<'tcx>,
                                    fn_ast_id: ast::NodeId,
                                    _attributes: &[ast::Attribute],
+                                   parent_checked_ints: bool,
                                    output_type: ty::FnOutput<'tcx>,
                                    abi: Abi,
                                    closure_env: closure::ClosureEnv<'b, 'tcx>) {
@@ -1804,7 +1830,7 @@ pub fn trans_closure<'a, 'b, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
            param_substs.repr(ccx.tcx()));
 
     let arena = TypedArena::new();
-    let fcx = new_fn_ctxt(ccx,
+    let mut fcx = new_fn_ctxt(ccx,
                           llfndecl,
                           fn_ast_id,
                           closure_env.kind != closure::NotClosure,
@@ -1812,6 +1838,9 @@ pub fn trans_closure<'a, 'b, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
                           param_substs,
                           Some(body.span),
                           &arena);
+    // Inherit int overflow checking from lexical parent of the closure.
+    fcx.checked_ints = fcx.checked_ints && parent_checked_ints;
+
     let mut bcx = init_function(&fcx, false, output_type);
 
     // cleanup scope for the incoming arguments
@@ -1946,6 +1975,7 @@ pub fn trans_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
                   param_substs,
                   id,
                   attrs,
+                  true,
                   output_type,
                   abi,
                   closure::ClosureEnv::new(&[], closure::NotClosure));

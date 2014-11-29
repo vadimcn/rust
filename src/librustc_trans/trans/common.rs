@@ -261,6 +261,9 @@ pub struct FunctionContext<'a, 'tcx: 'a> {
 
     // Cleanup scopes.
     pub scopes: RefCell<Vec<cleanup::CleanupScope<'a, 'tcx>>>,
+
+    // Are checked ints enabled in this function?
+    pub checked_ints: bool,
 }
 
 impl<'a, 'tcx> FunctionContext<'a, 'tcx> {
