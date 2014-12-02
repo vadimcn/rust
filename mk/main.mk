@@ -153,7 +153,8 @@ endif
 # have to worry about the distribution of one file (with its native dynamic
 # dependencies)
 RUSTFLAGS_STAGE0 += -C prefer-dynamic
-RUSTFLAGS_STAGE1 += -C prefer-dynamic
+RUSTFLAGS_STAGE1 += -C prefer-dynamic -Zchecked-ints
+RUSTFLAGS_STAGE2 += -Zchecked-ints
 RUST_LIB_FLAGS_ST2 += -C prefer-dynamic
 RUST_LIB_FLAGS_ST3 += -C prefer-dynamic
 
