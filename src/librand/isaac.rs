@@ -57,6 +57,7 @@ impl IsaacRng {
     /// Initialises `self`. If `use_rsl` is true, then use the current value
     /// of `rsl` as a seed, otherwise construct one algorithmically (not
     /// randomly).
+    #[unchecked_ints]
     fn init(&mut self, use_rsl: bool) {
         let mut a = 0x9e3779b9;
         let mut b = a;
@@ -119,6 +120,7 @@ impl IsaacRng {
     /// Refills the output buffer (`self.rsl`)
     #[inline]
     #[allow(unsigned_negation)]
+    #[unchecked_ints]
     fn isaac(&mut self) {
         self.c += 1;
         // abbreviations

@@ -669,6 +669,7 @@ impl TwoWaySearcher {
     // Specifically, returns (i, p), where i is the starting index of v in some
     // critical factorization (u, v) and p = period(v)
     #[inline]
+    #[unchecked_ints] // b = arr[left + offset];
     fn maximal_suffix(arr: &[u8], reversed: bool) -> (uint, uint) {
         let mut left = -1; // Corresponds to i in the paper
         let mut right = 0; // Corresponds to j in the paper
@@ -683,7 +684,7 @@ impl TwoWaySearcher {
                 b = arr[right + offset];
             } else {
                 a = arr[right + offset];
-                b = arr[left + offset];
+                b = arr[left + offset]; // <==========
             }
             if a < b {
                 // Suffix is smaller, period is entire prefix so far.

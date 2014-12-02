@@ -210,8 +210,9 @@ impl<K, V, M: Deref<RawTable<K, V>>> Bucket<K, V, M> {
         Bucket::at_index(table, hash.inspect() as uint)
     }
 
+    #[unchecked_ints] // table.capacity() - 1
     pub fn at_index(table: M, ib_index: uint) -> Bucket<K, V, M> {
-        let ib_index = ib_index & (table.capacity() - 1);
+        let ib_index = ib_index & (table.capacity() - 1); // <==========
         Bucket {
             raw: unsafe {
                table.first_bucket_raw().offset(ib_index as int)
@@ -251,6 +252,7 @@ impl<K, V, M: Deref<RawTable<K, V>>> Bucket<K, V, M> {
     }
 
     /// Modifies the bucket pointer in place to make it point to the next slot.
+    #[unchecked_ints]
     pub fn next(&mut self) {
         // Branchless bucket iteration step.
         // As we reach the end of the table...
@@ -354,6 +356,7 @@ impl<K, V, M: Deref<RawTable<K, V>>> FullBucket<K, V, M> {
     ///
     /// In the cited blog posts above, this is called the "distance to
     /// initial bucket", or DIB. Also known as "probe count".
+    #[unchecked_ints]
     pub fn distance(&self) -> uint {
         // Calculates the distance one has to travel when going from
         // `hash mod capacity` onwards to `idx mod capacity`, wrapping around

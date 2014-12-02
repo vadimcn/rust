@@ -305,6 +305,7 @@ impl Engine256State {
         self.h7 = h[7];
     }
 
+    #[unchecked_ints]
     fn process_block(&mut self, data: &[u8]) {
         fn ch(x: u32, y: u32, z: u32) -> u32 {
             ((x & y) ^ ((!x) & z))

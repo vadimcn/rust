@@ -124,6 +124,7 @@ impl SipState {
 
     /// Returns the computed hash.
     #[inline]
+    #[unchecked_ints]
     pub fn result(&self) -> u64 {
         let mut v0 = self.v0;
         let mut v1 = self.v1;
@@ -149,6 +150,7 @@ impl SipState {
 
 impl Writer for SipState {
     #[inline]
+    #[unchecked_ints]
     fn write(&mut self, msg: &[u8]) {
         let length = msg.len();
         self.length += length;

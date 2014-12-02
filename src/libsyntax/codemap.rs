@@ -55,8 +55,9 @@ impl Add<BytePos, BytePos> for BytePos {
 }
 
 impl Sub<BytePos, BytePos> for BytePos {
+    #[unchecked_ints] // probably caller's screw-up
     fn sub(&self, rhs: &BytePos) -> BytePos {
-        BytePos((self.to_uint() - rhs.to_uint()) as u32)
+        BytePos((self.to_uint() - rhs.to_uint()) as u32) // <==========
     }
 }
 

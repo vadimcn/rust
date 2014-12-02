@@ -23,6 +23,7 @@ fn precise_time_ns() -> u64 {
     return os_precise_time_ns();
 
     #[cfg(windows)]
+    #[unchecked_ints] // ticks as u64 * 1000000000 (FIXME #17845)
     fn os_precise_time_ns() -> u64 {
         let mut ticks_per_s = 0;
         assert_eq!(unsafe {
@@ -34,7 +35,7 @@ fn precise_time_ns() -> u64 {
             libc::QueryPerformanceCounter(&mut ticks)
         }, 1);
 
-        return (ticks as u64 * 1000000000) / (ticks_per_s as u64);
+        return (ticks as u64 * 1000000000) / (ticks_per_s as u64); // <==========
     }
 
     #[cfg(any(target_os = "macos", target_os = "ios"))]

@@ -671,6 +671,7 @@ pub fn get_enum_variant_defs(intr: &IdentInterner,
     }).collect()
 }
 
+#[unchecked_ints] // disr_val += 1
 pub fn get_enum_variants<'tcx>(intr: Rc<IdentInterner>, cdata: Cmd, id: ast::NodeId,
                                tcx: &ty::ctxt<'tcx>) -> Vec<Rc<ty::VariantInfo<'tcx>>> {
     let data = cdata.data();
@@ -696,7 +697,7 @@ pub fn get_enum_variants<'tcx>(intr: Rc<IdentInterner>, cdata: Cmd, id: ast::Nod
             _         => { /* empty */ }
         }
         let old_disr_val = disr_val;
-        disr_val += 1;
+        disr_val += 1; // <==========
         Rc::new(ty::VariantInfo {
             args: arg_tys,
             arg_names: None,

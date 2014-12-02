@@ -138,6 +138,7 @@ pub fn expand_deriving_encodable(cx: &mut ExtCtxt,
     trait_def.expand(cx, mitem, item, push)
 }
 
+#[unchecked_ints] // fields.len() - 1;
 fn encodable_substructure(cx: &mut ExtCtxt, trait_span: Span,
                           substr: &Substructure) -> P<Expr> {
     let encoder = substr.nonself_args[0].clone();
@@ -210,7 +211,7 @@ fn encodable_substructure(cx: &mut ExtCtxt, trait_span: Span,
             let encoder = cx.expr_ident(trait_span, blkarg);
             let emit_variant_arg = cx.ident_of("emit_enum_variant_arg");
             let mut stmts = Vec::new();
-            let last = fields.len() - 1;
+            let last = fields.len() - 1; // <==========
             for (i, &FieldInfo { ref self_, span, .. }) in fields.iter().enumerate() {
                 let enc = cx.expr_method_call(span, self_.clone(),
                                               encode, vec!(blkencoder.clone()));

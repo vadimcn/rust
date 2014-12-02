@@ -83,6 +83,7 @@ impl Hasher<FnvState> for FnvHasher {
 }
 
 impl Writer for FnvState {
+    #[unchecked_ints]
     fn write(&mut self, bytes: &[u8]) {
         let FnvState(mut hash) = *self;
         for byte in bytes.iter() {

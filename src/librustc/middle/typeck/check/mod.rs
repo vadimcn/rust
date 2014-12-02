@@ -4831,6 +4831,7 @@ pub fn check_enum_variants(ccx: &CrateCtxt,
         }
     }
 
+    #[unchecked_ints] // prev_disr_val + 1
     fn do_check<'a, 'tcx>(ccx: &CrateCtxt<'a, 'tcx>,
                           vs: &[P<ast::Variant>],
                           id: ast::NodeId,
@@ -4847,7 +4848,7 @@ pub fn check_enum_variants(ccx: &CrateCtxt,
             // If the discriminant value is specified explicitly in the enum check whether the
             // initialization expression is valid, otherwise use the last value plus one.
             let mut current_disr_val = match prev_disr_val {
-                Some(prev_disr_val) => prev_disr_val + 1,
+                Some(prev_disr_val) => prev_disr_val + 1, // <==========
                 None => ty::INITIAL_DISCRIMINANT_VALUE
             };
 

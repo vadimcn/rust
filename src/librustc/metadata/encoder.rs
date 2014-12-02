@@ -306,6 +306,7 @@ fn encode_struct_fields(rbml_w: &mut Encoder,
     }
 }
 
+#[unchecked_ints] // disr_val += 1
 fn encode_enum_variant_info(ecx: &EncodeContext,
                             rbml_w: &mut Encoder,
                             id: NodeId,
@@ -359,7 +360,7 @@ fn encode_enum_variant_info(ecx: &EncodeContext,
 
         ecx.tcx.map.with_path(variant.node.id, |path| encode_path(rbml_w, path));
         rbml_w.end_tag();
-        disr_val += 1;
+        disr_val += 1; // <==========
         i += 1;
     }
 }

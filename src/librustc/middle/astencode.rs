@@ -200,10 +200,11 @@ impl<'a, 'b, 'tcx> DecodeContext<'a, 'b, 'tcx> {
     /// item currently being inlined, such as a local variable or argument.  All naked node-ids
     /// that appear in types have this property, since if something might refer to an external item
     /// we would use a def-id to allow for the possibility that the item resides in another crate.
+    #[unchecked_ints]
     pub fn tr_id(&self, id: ast::NodeId) -> ast::NodeId {
         // from_id_range should be non-empty
         assert!(!self.from_id_range.empty());
-        (id - self.from_id_range.min + self.to_id_range.min)
+        (id - self.from_id_range.min + self.to_id_range.min) // <==========
     }
 
     /// Translates an EXTERNAL def-id, converting the crate number from the one used in the encoded

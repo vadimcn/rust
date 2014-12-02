@@ -4623,6 +4623,7 @@ pub fn type_is_empty(cx: &ctxt, ty: Ty) -> bool {
      }
 }
 
+#[unchecked_ints] // val + 1
 pub fn enum_variants<'tcx>(cx: &ctxt<'tcx>, id: ast::DefId)
                            -> Rc<Vec<Rc<VariantInfo<'tcx>>>> {
     memoized(&cx.enum_var_cache, id, |id: ast::DefId| {
@@ -4642,7 +4643,7 @@ pub fn enum_variants<'tcx>(cx: &ctxt<'tcx>, id: ast::DefId)
                             Rc::new(enum_definition.variants.iter().map(|variant| {
 
                                 let mut discriminant = match last_discriminant {
-                                    Some(val) => val + 1,
+                                    Some(val) => val + 1, // <==========
                                     None => INITIAL_DISCRIMINANT_VALUE
                                 };
 
