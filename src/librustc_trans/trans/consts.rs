@@ -670,6 +670,31 @@ fn const_expr_unadjusted(cx: &CrateContext, e: &ast::Expr) -> ValueRef {
                 None => C_nil(cx)
             }
           }
+          ast::ExprSizeof(ref ast_ty) => {
+            let ty = ty::node_id_to_type(cx.tcx(), ast_ty.id);
+            let llty = type_of::type_of(cx, ty);
+            let llval = llvm::LLVMSizeOf(llty.to_ref());
+            // LLVMSizeOf returns i64, but usize may be smaller, so we truncate
+            let llusizety = type_of::type_of(cx, cx.tcx().types.uint);
+            llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref())
+          }
+          ast::ExprAlignof(ref ast_ty) => {
+            let ty = ty::node_id_to_type(cx.tcx(), ast_ty.id);
+            let llty = type_of::type_of(cx, ty);
+            let llval = llvm::LLVMAlignOf(llty.to_ref());
+            let llusizety = type_of::type_of(cx, cx.tcx().types.uint);
+            llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref())
+          }
+          ast::ExprOffsetof(ref ast_ty, ref ident) => {
+            let ty = ty::node_id_to_type(cx.tcx(), ast_ty.id);
+            let llty = type_of::type_of(cx, ty);
+            expr::with_field_tys(cx.tcx(), ty, None, |discr, field_tys| {
+                let ix = ty::field_idx_strict(cx.tcx(), ident.name, field_tys);
+                let llval = llvm::LLVMOffsetOf(llty.to_ref(), ix as u32);
+                let llusizety = type_of::type_of(cx, cx.tcx().types.uint);
+                llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref())
+            })
+          }
           _ => cx.sess().span_bug(e.span,
                   "bad constant expression type in consts::const_expr")
         };

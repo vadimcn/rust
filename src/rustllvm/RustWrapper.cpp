@@ -927,3 +927,7 @@ extern "C" void LLVMWriteSMDiagnosticToString(LLVMSMDiagnosticRef d, RustStringR
     raw_rust_string_ostream os(str);
     unwrap(d)->print("", os);
 }
+
+extern "C" LLVMValueRef LLVMOffsetOf(LLVMTypeRef Type, unsigned FieldNo) {
+    return wrap(ConstantExpr::getOffsetOf(unwrap<StructType>(Type), FieldNo));
+}

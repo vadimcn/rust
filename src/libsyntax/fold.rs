@@ -1391,6 +1391,9 @@ pub fn noop_fold_expr<T: Folder>(Expr {id, node, span}: Expr, folder: &mut T) ->
             ExprBreak(opt_ident) => ExprBreak(opt_ident.map(|x| folder.fold_ident(x))),
             ExprAgain(opt_ident) => ExprAgain(opt_ident.map(|x| folder.fold_ident(x))),
             ExprRet(e) => ExprRet(e.map(|x| folder.fold_expr(x))),
+            ExprSizeof(ty) => ExprSizeof(folder.fold_ty(ty)),
+            ExprAlignof(ty) => ExprAlignof(folder.fold_ty(ty)),
+            ExprOffsetof(ty, ident) => ExprOffsetof(folder.fold_ty(ty), folder.fold_ident(ident)),
             ExprInlineAsm(InlineAsm {
                 inputs,
                 outputs,

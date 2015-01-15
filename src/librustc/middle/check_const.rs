@@ -168,7 +168,10 @@ fn check_expr(v: &mut CheckCrateVisitor, e: &ast::Expr) {
         ast::ExprIndex(..) |
         ast::ExprTup(..) |
         ast::ExprRepeat(..) |
-        ast::ExprStruct(..) => {}
+        ast::ExprStruct(..) |
+        ast::ExprSizeof(..) |
+        ast::ExprAlignof(..) |
+        ast::ExprOffsetof(..) => {}
 
         ast::ExprAddrOf(_, ref inner) => {
             match inner.node {

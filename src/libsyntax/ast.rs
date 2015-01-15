@@ -765,6 +765,10 @@ pub enum Expr_ {
     /// A vector literal constructed from one repeated element.
     ExprRepeat(P<Expr> /* element */, P<Expr> /* count */),
 
+    ExprSizeof(P<Ty>),
+    ExprAlignof(P<Ty>),
+    ExprOffsetof(P<Ty>, Ident),
+
     /// No-op: used solely so we can pretty-print faithfully
     ExprParen(P<Expr>)
 }

@@ -1836,6 +1836,25 @@ impl<'a> State<'a> {
                     _ => ()
                 }
             }
+            ast::ExprSizeof(ref ty) => {
+                try!(word(&mut self.s, "sizeof("));
+                try!(self.print_type(&**ty));
+                try!(word(&mut self.s, ")"));
+            }
+            ast::ExprAlignof(ref ty) => {
+                try!(word(&mut self.s, "alignof("));
+                try!(self.print_type(&**ty));
+                try!(word(&mut self.s, ")"));
+            }
+            ast::ExprOffsetof(ref ty, ref ident) => {
+                try!(word(&mut self.s, "offsetof("));
+                try!(self.print_ident(*ident));
+                try!(space(&mut self.s));
+                try!(word(&mut self.s, "in"));
+                try!(space(&mut self.s));
+                try!(self.print_type(&**ty));
+                try!(word(&mut self.s, ")"));
+            }
             ast::ExprInlineAsm(ref a) => {
                 try!(word(&mut self.s, "asm!"));
                 try!(self.popen());

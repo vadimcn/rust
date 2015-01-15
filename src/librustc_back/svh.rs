@@ -260,6 +260,9 @@ mod svh_visitor {
         SawExprRepeat,
         SawExprParen,
         SawExprForLoop,
+        SawExprSizeof,
+        SawExprAlignof,
+        SawExprOffsetof,
     }
 
     fn saw_expr<'a>(node: &'a Expr_) -> SawExprComponent<'a> {
@@ -296,6 +299,9 @@ mod svh_visitor {
             ExprRepeat(..)           => SawExprRepeat,
             ExprParen(..)            => SawExprParen,
             ExprForLoop(..)          => SawExprForLoop,
+            ExprSizeof(..)           => SawExprSizeof,
+            ExprAlignof(..)          => SawExprAlignof,
+            ExprOffsetof(..)         => SawExprOffsetof,
 
             // just syntactic artifacts, expanded away by time of SVH.
             ExprIfLet(..)            => unreachable!(),

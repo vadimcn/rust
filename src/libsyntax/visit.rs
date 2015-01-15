@@ -911,6 +911,14 @@ pub fn walk_expr<'v, V: Visitor<'v>>(visitor: &mut V, expression: &'v Expr) {
                 visitor.visit_expr(&**output)
             }
         }
+        ExprSizeof(ref typ) |
+        ExprAlignof(ref typ) => {
+            visitor.visit_ty(&**typ)
+        }
+        ExprOffsetof(ref typ, ref path) => {
+            visitor.visit_ty(&**typ);
+            //visitor.visit_ident(path, expression.id)  BUGBUG
+        }
     }
 
     visitor.visit_expr_post(expression)

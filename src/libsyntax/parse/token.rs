@@ -561,14 +561,14 @@ declare_special_idents_and_keywords! {
         (44,                         Box,        "box");
         (45,                         Const,      "const");
         (46,                         Where,      "where");
-        'reserved:
-        (47,                         Alignof,    "alignof");
-        (48,                         Be,         "be");
+        (47,                         Sizeof,     "sizeof");
+        (48,                         Alignof,    "alignof");
         (49,                         Offsetof,   "offsetof");
-        (50,                         Priv,       "priv");
-        (51,                         Pure,       "pure");
-        (52,                         Sizeof,     "sizeof");
-        (53,                         Typeof,     "typeof");
+        (50,                         Typeof,     "typeof");
+        'reserved:
+        (51,                         Be,         "be");
+        (52,                         Priv,       "priv");
+        (53,                         Pure,       "pure");
         (54,                         Unsized,    "unsized");
         (55,                         Yield,      "yield");
         (56,                         Do,         "do");

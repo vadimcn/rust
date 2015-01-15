@@ -124,6 +124,11 @@ impl<'cx, 'tcx, 'v> Visitor<'v> for WritebackCx<'cx, 'tcx> {
                                                input.id);
                 }
             }
+            ast::ExprSizeof(ref ast_ty) |
+            ast::ExprAlignof(ref ast_ty) |
+            ast::ExprOffsetof(ref ast_ty, _) => {
+                self.visit_node_id(ResolvingExpr(e.span), ast_ty.id);
+            }
             _ => {}
         }
 

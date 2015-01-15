@@ -4594,7 +4594,10 @@ pub fn expr_kind(tcx: &ctxt, expr: &ast::Expr) -> ExprKind {
         ast::ExprClosure(..) |
         ast::ExprBlock(..) |
         ast::ExprRepeat(..) |
-        ast::ExprVec(..) => {
+        ast::ExprVec(..) |
+        ast::ExprSizeof(..) |
+        ast::ExprAlignof(..) |
+        ast::ExprOffsetof(..) => {
             RvalueDpsExpr
         }
 

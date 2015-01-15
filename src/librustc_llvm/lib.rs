@@ -2060,6 +2060,8 @@ extern {
                                              CX: *mut c_void);
 
     pub fn LLVMWriteSMDiagnosticToString(d: SMDiagnosticRef, s: RustStringRef);
+
+    pub fn LLVMOffsetOf(ty: TypeRef, fieldNo: u32) -> ValueRef; 
 }
 
 pub fn SetInstructionCallConv(instr: ValueRef, cc: CallConv) {

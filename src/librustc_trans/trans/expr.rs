@@ -1177,6 +1177,52 @@ fn trans_rvalue_dps_unadjusted<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
         ast::ExprAssignOp(op, ref dst, ref src) => {
             trans_assign_op(bcx, expr, op, &**dst, &**src)
         }
+        ast::ExprSizeof(ref ast_ty) => {
+            match dest {
+                Ignore => bcx,
+                SaveIn(lldest) => {
+                    let ty = node_id_type(bcx, ast_ty.id);
+                    let llty = type_of::type_of(bcx.ccx(), ty);
+                    let llval = unsafe { llvm::LLVMSizeOf(llty.to_ref()) };
+                    // LLVMSizeOf returns i64, but usize may be smaller, so we truncate
+                    let llusizety = type_of::type_of(bcx.ccx(), bcx.tcx().types.uint);
+                    let llval = unsafe { llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref()) };
+                    Store(bcx, llval, lldest);
+                    bcx
+                }
+            }
+        }
+        ast::ExprAlignof(ref ast_ty) => {
+            match dest {
+                Ignore => bcx,
+                SaveIn(lldest) => {
+                    let ty = node_id_type(bcx, ast_ty.id);
+                    let llty = type_of::type_of(bcx.ccx(), ty);
+                    let llval = unsafe { llvm::LLVMAlignOf(llty.to_ref()) };
+                    let llusizety = type_of::type_of(bcx.ccx(), bcx.tcx().types.uint);
+                    let llval = unsafe { llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref()) };
+                    Store(bcx, llval, lldest);
+                    bcx
+                }
+            }
+        }
+        ast::ExprOffsetof(ref ast_ty, ref ident) => {
+            match dest {
+                Ignore => bcx,
+                SaveIn(lldest) => {
+                    let ty = node_id_type(bcx, ast_ty.id);
+                    let llty = type_of::type_of(bcx.ccx(), ty);
+                    with_field_tys(bcx.tcx(), ty, None, |discr, field_tys| {
+                        let ix = ty::field_idx_strict(bcx.tcx(), ident.name, field_tys);
+                        let llval = unsafe { llvm::LLVMOffsetOf(llty.to_ref(), ix as u32) };
+                        let llusizety = type_of::type_of(bcx.ccx(), bcx.tcx().types.uint);
+                        let llval = unsafe { llvm::LLVMConstTruncOrBitCast(llval, llusizety.to_ref()) };
+                        Store(bcx, llval, lldest);
+                        bcx
+                    })
+                }
+            }
+        }
         _ => {
             bcx.tcx().sess.span_bug(
                 expr.span,

@@ -623,6 +623,10 @@ impl<'d,'t,'tcx,TYPER:mc::Typer<'tcx>> ExprUseVisitor<'d,'t,'tcx,TYPER> {
                 self.consume_expr(&**base);
             }
 
+            ast::ExprSizeof(..) |
+            ast::ExprAlignof(..) |
+            ast::ExprOffsetof(..) => {}
+
             ast::ExprMac(..) => {
                 self.tcx().sess.span_bug(
                     expr.span,

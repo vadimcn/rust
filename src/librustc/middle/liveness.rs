@@ -518,7 +518,8 @@ fn visit_expr(ir: &mut IrMaps, expr: &Expr) {
       ast::ExprBlock(..) | ast::ExprAssign(..) | ast::ExprAssignOp(..) |
       ast::ExprMac(..) | ast::ExprStruct(..) | ast::ExprRepeat(..) |
       ast::ExprParen(..) | ast::ExprInlineAsm(..) | ast::ExprBox(..) |
-      ast::ExprRange(..) => {
+      ast::ExprRange(..) | ast::ExprSizeof(..) | ast::ExprAlignof(..) | 
+      ast::ExprOffsetof(..) => {
           visit::walk_expr(ir, expr);
       }
     }
@@ -1221,6 +1222,9 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
             })
           }
 
+          ast::ExprSizeof(..) |
+          ast::ExprAlignof(..) |
+          ast::ExprOffsetof(..) |
           ast::ExprLit(..) => {
             succ
           }
@@ -1494,7 +1498,8 @@ fn check_expr(this: &mut Liveness, expr: &Expr) {
       ast::ExprBlock(..) | ast::ExprMac(..) | ast::ExprAddrOf(..) |
       ast::ExprStruct(..) | ast::ExprRepeat(..) | ast::ExprParen(..) |
       ast::ExprClosure(..) | ast::ExprPath(..) | ast::ExprBox(..) |
-      ast::ExprRange(..) | ast::ExprQPath(..) => {
+      ast::ExprRange(..) | ast::ExprQPath(..) |
+      ast::ExprSizeof(..) | ast::ExprAlignof(..) | ast::ExprOffsetof(..) => {
         visit::walk_expr(this, expr);
       }
       ast::ExprIfLet(..) => {

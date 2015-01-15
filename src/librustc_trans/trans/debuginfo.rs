@@ -3515,6 +3515,10 @@ fn create_scope_map(cx: &CrateContext,
             ast::ExprPath(_)  |
             ast::ExprQPath(_) => {}
 
+            ast::ExprSizeof(..) |
+            ast::ExprAlignof(..) |
+            ast::ExprOffsetof(..) => {}
+
             ast::ExprCast(ref sub_exp, _)     |
             ast::ExprAddrOf(_, ref sub_exp)  |
             ast::ExprField(ref sub_exp, _) |

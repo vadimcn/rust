@@ -3817,6 +3817,12 @@ fn check_expr_with_unifier<'a, 'tcx, F>(fcx: &FnCtxt<'a, 'tcx>,
             fcx.write_ty(id, typ);
         }
       }
+      ast::ExprSizeof(ref ast_ty) |
+      ast::ExprAlignof(ref ast_ty) |
+      ast::ExprOffsetof(ref ast_ty, _) => {
+        fcx.write_ty(ast_ty.id, fcx.to_ty(&**ast_ty));
+        fcx.write_ty(id, ty::mk_mach_uint(tcx, ast::TyUs(false)));
+      }
       ast::ExprStruct(ref path, ref fields, ref base_expr) => {
         // Resolve the path.
         let def = tcx.def_map.borrow().get(&id).map(|i| *i);
