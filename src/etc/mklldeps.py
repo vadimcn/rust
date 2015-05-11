@@ -81,9 +81,9 @@ if enable_static == '1':
     f.write("#[link(name = \"stdc++\", kind = \"static\")]\n")
 else:
     if 'stdlib=libc++' in out:
-        f.write("#[link(name = \"c++\")]\n")
+        f.write("#[cfg_attr(not(target_env = \"msvc\"), link(name = \"c++\"))]\n")
     else:
-        f.write("#[link(name = \"stdc++\")]\n")
+        f.write("#[cfg_attr(not(target_env = \"msvc\"), link(name = \"stdc++\"))]\n")
 
 # Attach everything to an extern block
 f.write("extern {}\n")
