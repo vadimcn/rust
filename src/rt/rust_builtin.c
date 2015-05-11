@@ -14,7 +14,12 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#if !defined(__WIN32__)
+
+#if defined(__WIN32__) || defined(_MSC_VER)
+#define WINDOWS
+#endif
+
+#if !defined(WINDOWS)
 #include <dirent.h>
 #include <pthread.h>
 #include <signal.h>
@@ -40,9 +45,11 @@
 
 /* Foreign builtins. */
 //include valgrind.h after stdint.h so that uintptr_t is defined for msys2 w64
+#ifndef WINDOWS
 #include "valgrind/valgrind.h"
+#endif
 
-#ifndef _WIN32
+#ifndef WINDOWS
 char*
 rust_list_dir_val(struct dirent* entry_ptr) {
     return entry_ptr->d_name;
@@ -84,12 +91,7 @@ rust_dirent_t_size() {
 }
 #endif
 
-uintptr_t
-rust_running_on_valgrind() {
-    return RUNNING_ON_VALGRIND;
-}
-
-#if defined(__WIN32__)
+#if defined(WINDOWS)
 int
 get_num_cpus() {
     SYSTEM_INFO sysinfo;
@@ -136,15 +138,17 @@ rust_get_num_cpus() {
     return get_num_cpus();
 }
 
-unsigned int
-rust_valgrind_stack_register(void *start, void *end) {
-  return VALGRIND_STACK_REGISTER(start, end);
+#ifdef WINDOWS
+uintptr_t
+rust_running_on_valgrind() {
+    return 0;
 }
-
-void
-rust_valgrind_stack_deregister(unsigned int id) {
-  VALGRIND_STACK_DEREGISTER(id);
+#else
+uintptr_t
+rust_running_on_valgrind() {
+    return RUNNING_ON_VALGRIND;
 }
+#endif
 
 #if defined(__DragonFly__)
 #include <errno.h>
