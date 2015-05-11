@@ -587,6 +587,7 @@ valopt build "${DEFAULT_BUILD}" "GNUs ./configure syntax LLVM build triple"
 valopt android-cross-path "/opt/ndk_standalone" "Android NDK standalone path"
 valopt release-channel "dev" "the name of the release channel to build"
 valopt musl-root "/usr/local" "MUSL root installation directory"
+valopt msvc-root "" "MSVC toolchain root installation directory"
 
 # Many of these are saved below during the "writing configuration" step
 # (others are conditionally saved).
@@ -1084,6 +1085,50 @@ do
                 err "musl libc $CFG_MUSL_ROOT/lib/libc.a not found"
             fi
             ;;
+
+        x86_64-*-msvc)
+            step_msg "targeting MSVC, disabling jemalloc"
+            CFG_DISABLE_JEMALLOC=1
+            putvar CFG_DISABLE_JEMALLOC
+
+            probe_need CFG_CMAKE cmake
+            probe CFG_CL cl
+            if [ -z "$CFG_CL" ]; then
+                if [ -z "$CFG_MSVC_ROOT" ]; then
+                    err "msvc root not found, pass --msvc-root or ensure \
+                         a 64-bit cl.exe is in your PATH"
+                fi
+                CFG_CL="$CFG_MSVC_ROOT/VC/bin/amd64/cl.exe"
+                putvar CFG_CL
+            else
+                if "$CFG_CL" 2>&1 | grep -q " for x64"
+                then
+                    if [ -z "$CFG_MSVC_ROOT" ]; then
+                        CFG_MSVC_ROOT=$(dirname "$CFG_CL")
+                        CFG_MSVC_ROOT=$(dirname "$CFG_MSVC_ROOT")
+                        CFG_MSVC_ROOT=$(dirname "$CFG_MSVC_ROOT")
+                        CFG_MSVC_ROOT=$(dirname "$CFG_MSVC_ROOT")
+                        CFG_MSVC_ROOT=$(abs_path "$CFG_MSVC_ROOT")
+                        putvar CFG_MSVC_ROOT
+                    fi
+                else
+                    err "cl.exe does not look like a 64-bit compiler"
+                fi
+            fi
+            CFG_LIB="\"$CFG_MSVC_ROOT/VC/bin/amd64/lib.exe\""
+            CFG_LINK="\"$CFG_MSVC_ROOT/VC/bin/amd64/link.exe\""
+
+            vcvarsall="$CFG_MSVC_ROOT/VC/vcvarsall.bat"
+            vcvarsall=$(cygpath -w "$vcvarsall")
+            CFG_MSVC_INCLUDE=$(cmd /c "\"$vcvarsall\" amd64 && cmd /c echo %INCLUDE%")
+            CFG_MSVC_LIB=$(cmd /c "\"$vcvarsall\" amd64 && cmd /c echo %LIB%")
+
+            putvar CFG_LIB
+            putvar CFG_LINK
+            putvar CFG_MSVC_INCLUDE
+            putvar CFG_MSVC_LIB
+            ;;
+
         *)
             ;;
     esac
@@ -1125,6 +1170,7 @@ do
   do
     make_dir $t/rt/stage$s
     make_dir $t/rt/jemalloc
+    make_dir $t/rt/compiler-rt
     for i in                                          \
       isaac sync test \
       arch/i386 arch/x86_64 arch/arm arch/aarch64 arch/mips arch/powerpc
