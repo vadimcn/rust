@@ -173,3 +173,70 @@ impl<'a> Linker for GnuLinker<'a> {
         self.cmd.arg("-Wl,-Bdynamic");
     }
 }
+
+pub struct MsvcLinker<'a> {
+    pub cmd: &'a mut Command,
+    pub sess: &'a Session,
+}
+
+impl<'a> Linker for MsvcLinker<'a> {
+    fn link_rlib(&mut self, lib: &Path) { self.cmd.arg(lib); }
+    fn add_object(&mut self, path: &Path) { self.cmd.arg(path); }
+    fn args(&mut self, args: &[String]) { self.cmd.args(args); }
+    fn build_dylib(&mut self, _out_filename: &Path) { self.cmd.arg("/DLL"); }
+    fn gc_sections(&mut self, _is_dylib: bool) { self.cmd.arg("/OPT:REF"); }
+
+    fn link_dylib(&mut self, lib: &str) {
+        self.cmd.arg(&format!("{}.lib", lib));
+    }
+    fn link_staticlib(&mut self, lib: &str) {
+        self.cmd.arg(&format!("{}.lib", lib));
+    }
+
+    fn position_independent_executable(&mut self) {
+        // noop
+    }
+
+    fn no_default_libraries(&mut self) {
+        // TODO: explain noop
+    }
+
+    fn include_path(&mut self, path: &Path) {
+        let mut arg = OsString::from("/LIBPATH:");
+        arg.push(path);
+        self.cmd.arg(&arg);
+    }
+
+    fn output_filename(&mut self, path: &Path) {
+        let mut arg = OsString::from("/OUT:");
+        arg.push(path);
+        self.cmd.arg(&arg);
+    }
+
+    fn framework_path(&mut self, _path: &Path) {
+        panic!("frameworks are not supported on windows")
+    }
+    fn link_framework(&mut self, _framework: &str) {
+        panic!("frameworks are not supported on windows")
+    }
+
+    fn link_whole_staticlib(&mut self, lib: &str, _search_path: &[PathBuf]) {
+        // not supported?
+        self.link_staticlib(lib);
+    }
+    fn optimize(&mut self) {
+        // Needs more investigation of `/OPT` arguments
+    }
+    fn whole_archives(&mut self) {
+        // hints not supported?
+    }
+    fn no_whole_archives(&mut self) {
+        // hints not supported?
+    }
+    fn hint_static(&mut self) {
+        // hints not supported?
+    }
+    fn hint_dynamic(&mut self) {
+        // hints not supported?
+    }
+}
