@@ -226,18 +226,27 @@ COMPRT_NAME_$(1) := $$(call CFG_STATIC_LIB_NAME_$(1),compiler-rt)
 COMPRT_LIB_$(1) := $$(RT_OUTPUT_DIR_$(1))/$$(COMPRT_NAME_$(1))
 COMPRT_BUILD_DIR_$(1) := $$(RT_OUTPUT_DIR_$(1))/compiler-rt
 
+COMPRT_CC_$(1) := $$(CC_$(1))
+COMPRT_AR_$(1) := $$(AR_$(1))
+COMPRT_CFLAGS_$(1) := $$(CFG_GCCISH_CFLAGS_$(1))
+ifeq ($$(findstring msvc,$(1)),msvc)
+COMPRT_CC_$(1) := gcc
+COMPRT_AR_$(1) := ar
+COMPRT_CFLAGS_$(1) := $$(CFG_GCCISH_CFLAGS_$(1)) -m64
+endif
+
 $$(COMPRT_LIB_$(1)): $$(COMPRT_DEPS) $$(MKFILE_DEPS)
 	@$$(call E, make: compiler-rt)
 	$$(Q)$$(MAKE) -C "$(S)src/compiler-rt" \
 		ProjSrcRoot="$(S)src/compiler-rt" \
 		ProjObjRoot="$$(abspath $$(COMPRT_BUILD_DIR_$(1)))" \
-		CC="$$(CC_$(1))" \
-		AR="$$(AR_$(1))" \
-		RANLIB="$$(AR_$(1)) s" \
-		CFLAGS="$$(CFG_GCCISH_CFLAGS_$(1))" \
+		CC='$$(COMPRT_CC_$(1))' \
+		AR='$$(COMPRT_AR_$(1))' \
+		RANLIB='$$(COMPRT_AR_$(1)) s' \
+		CFLAGS="$$(COMPRT_CFLAGS_$(1))" \
 		TargetTriple=$(1) \
 		triple-builtins
-	$$(Q)cp $$(COMPRT_BUILD_DIR_$(1))/triple/builtins/libcompiler_rt.a $$(COMPRT_LIB_$(1))
+	$$(Q)cp $$(COMPRT_BUILD_DIR_$(1))/triple/builtins/libcompiler_rt.a $$@
 
 ################################################################################
 # libbacktrace
