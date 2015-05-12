@@ -8,9 +8,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use prelude::v1::*;
+
 use any::Any;
 use intrinsics;
-use prelude::v1::*;
+use libc::c_void;
 
 pub unsafe fn panic(_data: Box<Any + Send + 'static>) -> ! {
     intrinsics::abort();
@@ -19,3 +21,10 @@ pub unsafe fn panic(_data: Box<Any + Send + 'static>) -> ! {
 pub unsafe fn cleanup(_ptr: *mut c_void) -> Box<Any + Send + 'static> {
     intrinsics::abort();
 }
+
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern fn rust_eh_personality() {}
+
+#[no_mangle]
+pub extern fn rust_eh_personality_catch() {}
