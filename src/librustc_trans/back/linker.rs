@@ -198,7 +198,12 @@ impl<'a> Linker for MsvcLinker<'a> {
     }
 
     fn no_default_libraries(&mut self) {
-        // TODO: explain noop
+        // Currently we don't pass the /NODEFAULTLIB flag to the linker on MSVC
+        // as there's been trouble in the past of linking the C++ standard
+        // library required by LLVM. This likely needs to happen one day, but
+        // in general Windows is also a more controlled environment than
+        // Windows, so it's not necessarily as critical that this be
+        // implemented.
     }
 
     fn include_path(&mut self, path: &Path) {
@@ -233,10 +238,13 @@ impl<'a> Linker for MsvcLinker<'a> {
     fn no_whole_archives(&mut self) {
         // hints not supported?
     }
-    fn hint_static(&mut self) {
-        // hints not supported?
-    }
-    fn hint_dynamic(&mut self) {
-        // hints not supported?
-    }
+
+    // On windows static libraries are of the form `foo.lib` and dynamic
+    // libraries are not linked against directly, but rather through their
+    // import libraries also called `foo.lib`. As a result there's no
+    // possibility for a native library to appear both dynamically and
+    // statically in the same folder so we don't have to worry about hints like
+    // we do on Unix platforms.
+    fn hint_static(&mut self) {}
+    fn hint_dynamic(&mut self) {}
 }
