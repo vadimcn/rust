@@ -154,7 +154,7 @@ $$(TLIB$(1)_T_$(2)_H_$(3))/%: $$(RT_OUTPUT_DIR_$(2))/% \
 	@$$(call E, cp: $$@)
 	$$(Q)cp $$< $$@
 
-$$(TBIN$(1)_T_$(2)_H_$(3))/%: $$(CFG_LLVM_INST_DIR_$(2))/bin/%
+$$(TBIN$(1)_T_$(2)_H_$(3))/%: $$(CFG_LLVM_INST_DIR_$(2))/bin/% \
 	    | $$(TBIN$(1)_T_$(2)_H_$(3))/ $$(SNAPSHOT_RUSTC_POST_CLEANUP)
 	@$$(call E, cp: $$@)
 	$$(Q)cp $$< $$@
