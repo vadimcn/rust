@@ -127,16 +127,26 @@ extern {}
 ///   run.
 pub unsafe fn try<F: FnOnce()>(f: F) -> Result<(), Box<Any + Send>> {
     let mut f = Some(f);
+    return inner_try(try_fn::<F>, &mut f as *mut _ as *mut c_void);
 
-    let prev = PANICKING.with(|s| s.get());
-    PANICKING.with(|s| s.set(false));
-    let ep = rust_try(try_fn::<F>, &mut f as *mut _ as *mut c_void);
-    PANICKING.with(|s| s.set(prev));
-    return if ep.is_null() {
-        Ok(())
-    } else {
-        Err(imp::cleanup(ep))
-    };
+    // We use an inner non-generic function here to avoid the requirement that
+    // the `rust_try` symbol needs to be exposed from the standard library. On
+    // MSVC this requires the symbol to be tagged with `dllexport`, but it's
+    // easier to not have conditional `src/rt/rust_try.ll` files and instead
+    // just have this non-generic shim the compiler can take care of exposing
+    // correctly.
+    unsafe fn inner_try(f: extern fn(*mut c_void), data: *mut c_void)
+                        -> Result<(), Box<Any + Send>> {
+        let prev = PANICKING.with(|s| s.get());
+        PANICKING.with(|s| s.set(false));
+        let ep = rust_try(f, data);
+        PANICKING.with(|s| s.set(prev));
+        if ep.is_null() {
+            Ok(())
+        } else {
+            Err(imp::cleanup(ep))
+        }
+    }
 
     extern fn try_fn<F: FnOnce()>(opt_closure: *mut c_void) {
         let opt_closure = opt_closure as *mut Option<F>;
