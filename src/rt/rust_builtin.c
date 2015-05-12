@@ -49,6 +49,12 @@
 #include "valgrind/valgrind.h"
 #endif
 
+#if defined(_MSC_VER)
+# define RUST_BUILTIN_API __declspec(dllexport)
+#else
+# define RUST_BUILTIN_API
+#endif
+
 #ifndef WINDOWS
 char*
 rust_list_dir_val(struct dirent* entry_ptr) {
@@ -133,6 +139,7 @@ get_num_cpus() {
 }
 #endif
 
+RUST_BUILTIN_API
 uintptr_t
 rust_get_num_cpus() {
     return get_num_cpus();
