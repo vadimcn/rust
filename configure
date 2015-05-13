@@ -135,16 +135,16 @@ probe_need() {
 }
 
 validate_opt () {
-    for arg in $CFG_CONFIGURE_ARGS
+    for arg in "${CFG_CONFIGURE_ARGS[@]}"
     do
         isArgValid=0
         for option in $BOOL_OPTIONS
         do
-            if test --disable-$option = $arg
+            if test --disable-$option = "$arg"
             then
                 isArgValid=1
             fi
-            if test --enable-$option = $arg
+            if test --enable-$option = "$arg"
             then
                 isArgValid=1
             fi
@@ -196,12 +196,12 @@ valopt_core() {
         local V="CFG_${UOP}"
         local V_PROVIDED="${V}_PROVIDED"
         eval $V="$DEFAULT"
-        for arg in $CFG_CONFIGURE_ARGS
+        for arg in "${CFG_CONFIGURE_ARGS[@]}"
         do
             if echo "$arg" | grep -q -- "--$OP="
             then
                 val=$(echo "$arg" | cut -f2 -d=)
-                eval $V=$val
+                eval $V=\"$val\"
                 eval $V_PROVIDED=1
             fi
         done
@@ -260,7 +260,7 @@ opt_core() {
 
     if [ $HELP -eq 0 ]
     then
-        for arg in $CFG_CONFIGURE_ARGS
+        for arg in "${CFG_CONFIGURE_ARGS[@]}"
         do
             if [ "$arg" = "--${FLAG}-${OP}" ]
             then
@@ -523,7 +523,7 @@ DEFAULT_BUILD="${CFG_CPUTYPE}-${CFG_OSTYPE}"
 CFG_SRC_DIR="$(abs_path $(dirname $0))/"
 CFG_BUILD_DIR="$(pwd)/"
 CFG_SELF="$0"
-CFG_CONFIGURE_ARGS="$@"
+CFG_CONFIGURE_ARGS=("$@")
 
 OPTIONS=""
 HELP=0
