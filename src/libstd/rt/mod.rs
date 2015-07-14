@@ -46,6 +46,7 @@ pub mod args;
 
 mod at_exit_imp;
 mod libunwind;
+mod dwarf;
 
 /// The default error code of the rust runtime if the main thread panics instead
 /// of exiting cleanly.

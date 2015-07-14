@@ -77,10 +77,21 @@ use sys_common::mutex::Mutex;
 // The actual unwinding implementation is cfg'd here, and we've got two current
 // implementations. One goes through SEH on Windows and the other goes through
 // libgcc via the libunwind-like API.
-#[cfg(target_env = "msvc")] #[path = "seh.rs"] #[doc(hidden)]
+
+// *-pc-windows-msvc
+//#[cfg(target_env = "msvc")]
+//#[path = "seh.rs"] #[doc(hidden)]
+//pub mod imp;
+
+// x86_64-pc-windows-gnu
+//#[cfg(all(windows, target_platform="x86_64", target_env="gnu"))]
+#[path = "seh64_gnu.rs"] #[doc(hidden)]
 pub mod imp;
-#[cfg(not(target_env = "msvc"))] #[path = "gcc.rs"] #[doc(hidden)]
-pub mod imp;
+
+// all others
+//#[cfg(any(unix, not(all(windows, target_platform="x86_64", target_env="gnu"))))]
+//#[path = "gcc.rs"] #[doc(hidden)]
+//pub mod imp;
 
 pub type Callback = fn(msg: &(Any + Send), file: &'static str, line: u32);
 

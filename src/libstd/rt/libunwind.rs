@@ -130,6 +130,14 @@ extern "C" {
                                    -> _Unwind_Reason_Code;
 
     pub fn _Unwind_DeleteException(exception: *mut _Unwind_Exception);
+    pub fn _Unwind_GetLanguageSpecificData(context: *const _Unwind_Context) -> *const u8;
+    pub fn _Unwind_GetIP(context: *const _Unwind_Context) -> _Unwind_Word;
+    pub fn _Unwind_SetIP(context: *mut _Unwind_Context, ip: _Unwind_Word);
+    pub fn _Unwind_GetGR(context: *const _Unwind_Context, index: i32) -> _Unwind_Word;
+    pub fn _Unwind_SetGR(context: *mut _Unwind_Context, index: i32, value: _Unwind_Word);
+    pub fn _Unwind_GetTextRelBase(context: *const _Unwind_Context) -> _Unwind_Word;
+    pub fn _Unwind_GetDataRelBase(context: *const _Unwind_Context) -> _Unwind_Word;
+    pub fn _Unwind_GetRegionStart(context: *const _Unwind_Context) -> _Unwind_Word;
 }
 
 // ... and now we just providing access to SjLj counterspart
