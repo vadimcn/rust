@@ -49,6 +49,8 @@ const EXCEPTION_UNWIND: DWORD = EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND |
                                 EXCEPTION_TARGET_UNWIND | EXCEPTION_COLLIDED_UNWIND;
 
 #[repr(C)]
+#[derive(Copy, Clone)]
+#[allow(raw_pointer_derive)]
 pub struct EXCEPTION_RECORD {
     ExceptionCode: DWORD,
     ExceptionFlags: DWORD,
@@ -144,8 +146,14 @@ extern "system" {
 // - _Unwind_Resume(), in turn, calls RtlUnwindEx() yet again, restoring the original unwind target.
 
 pub unsafe fn panic(data: Box<Any + Send + 'static>) -> ! {
-    drop(data);
-    RaiseException(RUST_PANIC, EXCEPTION_NONCONTINUABLE, 0, 0 as *const usize);
+    //let data = Box::into_raw(data);
+    //let params = [data as usize];
+    RaiseException(RUST_PANIC,
+                   EXCEPTION_NONCONTINUABLE,
+                   0,
+                   0 as *const usize);
+                   //params.len() as DWORD,
+                   //&params as *const usize);
     rtabort!("could not unwind stack");
 }
 
@@ -169,14 +177,7 @@ pub unsafe extern "C" fn rust_eh_personality_catch(
         er.ExceptionCode, er.ExceptionFlags, establisherFrame);
 
     if er.ExceptionFlags & EXCEPTION_UNWIND == 0 { // we are in the dispatch phase
-        let eh_ctx = eh::EHContext {
-            ip: dc.ControlPc,
-            func_start: dc.ImageBase + (*dc.FunctionEntry).BeginAddress as usize,
-            text_start: dc.ImageBase,
-            data_start: 0
-        };
-
-        if let Some(lpad) = eh::find_landing_pad(dc.HandlerData, eh_ctx) {
+        if let Some(lpad) = find_landing_pad(dc) {
         	RtlUnwindEx(establisherFrame,
         				lpad,
         	            exceptionRecord,
@@ -208,59 +209,21 @@ pub unsafe extern "C" fn rust_eh_personality(
     println!("rust_eh_personality: code={:X}, flags={:X}, frame={:X}, PC={:X}",
         er.ExceptionCode, er.ExceptionFlags, establisherFrame, dc.ControlPc);
 
-    if er.ExceptionFlags & EXCEPTION_TARGET_UNWIND != 0 {
-        assert!(er.ExceptionCode == RUST_UNWIND);
-        return ExceptionContinueSearch;
-    }
-
-    if er.ExceptionFlags & EXCEPTION_UNWIND == 0 &&
-       er.ExceptionCode == RUST_UNWIND &&
-       er.ExceptionInformation[0] == establisherFrame
-    {
-        RtlUnwindEx(establisherFrame,
-                    er.ExceptionInformation[1],
-                    exceptionRecord,
-                    0,
-                    contextRecord,
-                    dc.HistoryTable);
-        rtabort!("could not unwind");
-    }
-
-    if er.ExceptionFlags & EXCEPTION_UNWIND != 0 && // we are in the unwind phase
-       er.ExceptionFlags & EXCEPTION_TARGET_UNWIND == 0 { // ...but the current frame is not the unwind target
-        let eh_ctx = eh::EHContext {
-            ip: dc.ControlPc,
-            func_start: dc.ImageBase + (*dc.FunctionEntry).BeginAddress as usize,
-            text_start: dc.ImageBase,
-            data_start: 0
-        };
-        if let Some(lpad) = eh::find_landing_pad(dc.HandlerData, eh_ctx) { // ...and we have a landing pad
+    if er.ExceptionFlags & EXCEPTION_UNWIND == 0 { // we are in the dispatch phase
+        if let Some(lpad) = find_landing_pad(dc) { // ...and we have a landing pad
             // ...then we need to suspend the current unwind and target our landing pad instead
             println!("Found landing pad {:X}", lpad);
 
-            let params = [establisherFrame, lpad, exceptionRecord as usize, dc.TargetIp];
-            RaiseException(RUST_UNWIND, EXCEPTION_NONCONTINUABLE, 4, &params as *const usize);
-            /*
-            let mut new_er = EXCEPTION_RECORD {
-                ExceptionCode: RUST_UNWIND,
-                ExceptionFlags: 0,
-                ExceptionRecord: exceptionRecord,
-                ExceptionAddress: er.ExceptionAddress,
-                NumberParameters: 0,
-                ExceptionInformation: [0; 15]
-            };
+            let rd = Box::new(ResumeData {
+                origException: *exceptionRecord,
+            });
 
-            new_er.NumberParameters = 2;
-            new_er.ExceptionInformation[0] = establisherFrame;
-            new_er.ExceptionInformation[1] = dc.TargetIp;
-
-            RtlUnwindEx(establisherFrame,
-                        lpad,
-                        &new_er,
-                        &new_er as *const EXCEPTION_RECORD as usize,
-                        contextRecord,
-                        dc.HistoryTable);
-            */
+        	RtlUnwindEx(establisherFrame,
+        				lpad,
+        	            exceptionRecord,
+        	            Box::into_raw(rd) as usize,
+        	            dc.ContextRecord,
+        	            dc.HistoryTable);
             rtabort!("could not unwind");
         }
     }
@@ -268,70 +231,28 @@ pub unsafe extern "C" fn rust_eh_personality(
     ExceptionContinueSearch
 }
 
+#[repr(C)]
+pub struct ResumeData {
+    origException: EXCEPTION_RECORD,
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn _Unwind_Resume(ptr: usize) {
-    println!("_Unwind_Resume {:X}", ptr);
-    let er = &*(ptr as *const EXCEPTION_RECORD);
-
-    let mut context: CONTEXT = mem::uninitialized();
-    RtlCaptureContext(&mut context);
-/*
-    RtlUnwindEx(
-
-	       &ms_exc, gcc_exc, &ms_context, &ms_history);
-
-    RtlUnwindEx(er.ExceptionInformation[0],
-                er.ExceptionInformation[1],
-                er.ExceptionRecord,
-                0,
-                ptr::null(),
-                ptr::null());
-    */
+pub unsafe extern "C" fn _Unwind_Resume(resumeData: *const ResumeData) {
+    println!("_Unwind_Resume");
+    let rd = &*resumeData;
+    RaiseException(rd.origException.ExceptionCode,
+                   rd.origException.ExceptionFlags,
+                   rd.origException.NumberParameters,
+                   &rd.origException.ExceptionInformation as *const usize);
     rtabort!("could not resume unwind");
 }
 
-#[cfg(test)]
-mod test {
-    use prelude::v1::*;
-
-    struct Foo {
-        id: i32
-    }
-
-    impl Foo {
-        fn new(id:i32) -> Foo {
-            println!("Foo::new({})", id);
-            return Foo { id:id }
-        }
-    }
-
-    impl Drop for Foo {
-        fn drop(&mut self) {
-            println!("Foo::drop() {}", self.id);
-        }
-    }
-
-    #[test]
-    fn test_unwind() {
-        let x = Foo::new(0);
-        foo1();
-    }
-
-    #[inline(never)]
-    fn foo1() {
-        let x = Foo::new(1);
-        foo2();
-    }
-
-    #[inline(never)]
-    fn foo2() {
-        let x = Foo::new(2);
-        foo3();
-    }
-
-    #[inline(never)]
-    fn foo3() {
-        let x = Foo::new(3);
-        panic!();
-    }
+unsafe fn find_landing_pad(dc: &DISPATCHER_CONTEXT) -> Option<usize> {
+    let eh_ctx = eh::EHContext {
+        ip: dc.ControlPc,
+        func_start: dc.ImageBase + (*dc.FunctionEntry).BeginAddress as usize,
+        text_start: dc.ImageBase,
+        data_start: 0
+    };
+    eh::find_landing_pad(dc.HandlerData, eh_ctx)
 }
