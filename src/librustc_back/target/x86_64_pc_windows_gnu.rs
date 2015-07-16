@@ -13,9 +13,12 @@ use target::Target;
 pub fn target() -> Target {
     let mut base = super::windows_base::opts();
     base.cpu = "x86-64".to_string();
-    // On Win64 unwinding is handled by the OS, so we can link libgcc statically.
-    base.pre_link_args.push("-static-libgcc".to_string());
     base.pre_link_args.push("-m64".to_string());
+
+    let std_libs = ["-lmingwex","-lmingw32","-lmsvcrt","-ladvapi32","-lshell32","-luser32","-lkernel32","-lgcc"];
+    for s in std_libs.iter() {
+        base.post_link_args.push(s.to_string());
+    }
 
     Target {
         // FIXME: Test this. Copied from linux (#2398)
