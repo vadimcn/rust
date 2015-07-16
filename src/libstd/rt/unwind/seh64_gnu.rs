@@ -49,8 +49,6 @@ const EXCEPTION_UNWIND: DWORD = EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND |
                                 EXCEPTION_TARGET_UNWIND | EXCEPTION_COLLIDED_UNWIND;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-#[allow(raw_pointer_derive)]
 pub struct EXCEPTION_RECORD {
     ExceptionCode: DWORD,
     ExceptionFlags: DWORD,
@@ -61,16 +59,10 @@ pub struct EXCEPTION_RECORD {
 }
 
 #[repr(C)]
-pub struct CONTEXT {
-    _align: [simd::u64x2; 0], // FIXME align on 16-byte
-    _data: [u8; 1232] // sizeof(CONTEXT) == 1232
-}
+pub struct CONTEXT;
 
 #[repr(C)]
-pub struct UNWIND_HISTORY_TABLE {
-    _align: [simd::u64x2; 0], // FIXME align on 16-byte
-    _data: [u8; 216] // sizeof(UNWIND_HISTORY_TABLE) == 216
-}
+pub struct UNWIND_HISTORY_TABLE;
 
 #[repr(C)]
 pub struct RUNTIME_FUNCTION {
@@ -114,8 +106,6 @@ extern "system" {
                    ReturnValue: usize,
                    OriginalContext: *const CONTEXT,
                    HistoryTable: *const UNWIND_HISTORY_TABLE);
-
-    fn RtlCaptureContext(context: *mut CONTEXT);
 }
 
 // How does this work?
@@ -145,20 +135,24 @@ extern "system" {
 // - The control is passed to the landing pad, at the end of which _Unwind_Resume() is called.
 // - _Unwind_Resume(), in turn, calls RtlUnwindEx() yet again, restoring the original unwind target.
 
+#[repr(C)]
+struct PanicData {
+    data: Box<Any + Send + 'static>
+}
+
 pub unsafe fn panic(data: Box<Any + Send + 'static>) -> ! {
-    //let data = Box::into_raw(data);
-    //let params = [data as usize];
+    let panic_ctx = Box::new(PanicData { data: data });
+    let params = [Box::into_raw(panic_ctx) as usize];
     RaiseException(RUST_PANIC,
                    EXCEPTION_NONCONTINUABLE,
-                   0,
-                   0 as *const usize);
-                   //params.len() as DWORD,
-                   //&params as *const usize);
+                   params.len() as DWORD,
+                   &params as *const usize);
     rtabort!("could not unwind stack");
 }
 
-pub unsafe fn cleanup(_ptr: *mut c_void) -> Box<Any + Send + 'static> {
-    rtabort!("not implemented");
+pub unsafe fn cleanup(ptr: *mut c_void) -> Box<Any + Send + 'static> {
+    let panic_ctx = Box::from_raw(ptr as *mut PanicData);
+    return panic_ctx.data;
 }
 
 #[no_mangle] // referenced from rust_try.ll
@@ -166,15 +160,18 @@ pub unsafe fn cleanup(_ptr: *mut c_void) -> Box<Any + Send + 'static> {
 pub unsafe extern "C" fn rust_eh_personality_catch(
     exceptionRecord: *mut EXCEPTION_RECORD,
     establisherFrame: usize,
-    _contextRecord: *mut CONTEXT,
+    contextRecord: *mut CONTEXT,
     dispatcherContext: *mut DISPATCHER_CONTEXT
 ) -> EXCEPTION_DISPOSITION
 {
     let er = &*exceptionRecord;
     let dc = &*dispatcherContext;
+    rtdebug!("rust_eh_personality_catch: code={:X}, flags={:X}, frame={:X}, ip={:X}",
+        er.ExceptionCode, er.ExceptionFlags, establisherFrame, dc.ControlPc);
 
-    println!("rust_eh_personality_catch: code={:X}, flags={:X}, frame={:X}",
-        er.ExceptionCode, er.ExceptionFlags, establisherFrame);
+    if er.ExceptionCode != RUST_PANIC {
+        rtabort!("foregin exceptions not supported");
+    }
 
     if er.ExceptionFlags & EXCEPTION_UNWIND == 0 { // we are in the dispatch phase
         if let Some(lpad) = find_landing_pad(dc) {
@@ -182,7 +179,7 @@ pub unsafe extern "C" fn rust_eh_personality_catch(
         				lpad,
         	            exceptionRecord,
         	            0,
-        	            dc.ContextRecord,
+        	            contextRecord,
         	            dc.HistoryTable);
             rtabort!("could not unwind");
         }
@@ -205,24 +202,23 @@ pub unsafe extern "C" fn rust_eh_personality(
 {
     let er = &*exceptionRecord;
     let dc = &*dispatcherContext;
-
-    println!("rust_eh_personality: code={:X}, flags={:X}, frame={:X}, PC={:X}",
+    rtdebug!("rust_eh_personality: code={:X}, flags={:X}, frame={:X}, ip={:X}",
         er.ExceptionCode, er.ExceptionFlags, establisherFrame, dc.ControlPc);
+
+    if er.ExceptionCode != RUST_PANIC {
+        rtabort!("foregin exceptions not supported");
+    }
 
     if er.ExceptionFlags & EXCEPTION_UNWIND == 0 { // we are in the dispatch phase
         if let Some(lpad) = find_landing_pad(dc) { // ...and we have a landing pad
             // ...then we need to suspend the current unwind and target our landing pad instead
-            println!("Found landing pad {:X}", lpad);
-
-            let rd = Box::new(ResumeData {
-                origException: *exceptionRecord,
-            });
+            rtdebug!("unwinding to landing pad {:X}", lpad);
 
         	RtlUnwindEx(establisherFrame,
         				lpad,
         	            exceptionRecord,
-        	            Box::into_raw(rd) as usize,
-        	            dc.ContextRecord,
+        	            er.ExceptionInformation[0], // pointer to PanicData
+        	            contextRecord,
         	            dc.HistoryTable);
             rtabort!("could not unwind");
         }
@@ -231,19 +227,14 @@ pub unsafe extern "C" fn rust_eh_personality(
     ExceptionContinueSearch
 }
 
-#[repr(C)]
-pub struct ResumeData {
-    origException: EXCEPTION_RECORD,
-}
-
 #[no_mangle]
-pub unsafe extern "C" fn _Unwind_Resume(resumeData: *const ResumeData) {
-    println!("_Unwind_Resume");
-    let rd = &*resumeData;
-    RaiseException(rd.origException.ExceptionCode,
-                   rd.origException.ExceptionFlags,
-                   rd.origException.NumberParameters,
-                   &rd.origException.ExceptionInformation as *const usize);
+pub unsafe extern "C" fn _Unwind_Resume(panic_ctx: usize) {
+    rtdebug!("_Unwind_Resume: {:X}", panic_ctx);
+    let params = [panic_ctx];
+    RaiseException(RUST_PANIC,
+                   EXCEPTION_NONCONTINUABLE,
+                   params.len() as DWORD,
+                   &params as *const usize);
     rtabort!("could not resume unwind");
 }
 

@@ -15,7 +15,7 @@
 
 use prelude::v1::*;
 use rt::dwarf::DwarfReader;
-use core::mem; 
+use core::mem;
 
 pub const DW_EH_PE_omit     : u8 = 0xFF;
 pub const DW_EH_PE_absptr   : u8 = 0x00;
