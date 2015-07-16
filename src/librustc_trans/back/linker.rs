@@ -150,10 +150,11 @@ impl<'a> Linker for GnuLinker<'a> {
     }
 
     fn no_default_libraries(&mut self) {
-        // Unfortunately right now passing -nodefaultlibs to gcc on windows
-        // doesn't work so hot (in terms of native dependencies). This if
-        // statement should hopefully be removed one day though!
-        if !self.sess.target.target.options.is_like_windows {
+        // We still let gcc pick the default libraries on 32-bit Windows to enable
+        // linking libgcc statically by passing "-C link-args=-static-libgcc".
+        // With "-nodefaultlibs -lgcc ..." this option would not longer work.
+        if !(self.sess.target.target.target_os == "windows" &&
+             self.sess.target.target.arch == "x86") {
             self.cmd.arg("-nodefaultlibs");
         }
     }

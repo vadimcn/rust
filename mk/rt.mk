@@ -54,6 +54,9 @@ NATIVE_DEPS_miniz_$(1) = miniz.c
 NATIVE_DEPS_rust_builtin_$(1) := rust_builtin.c \
 			rust_android_dummy.c
 NATIVE_DEPS_rustrt_native_$(1) := arch/$$(HOST_$(1))/record_sp.S
+ifeq ($(1),x86_64-pc-windows-gnu)
+NATIVE_DEPS_rustrt_native_$(1) += arch/$$(HOST_$(1))/chkstk.S
+endif
 ifeq ($$(findstring msvc,$(1)),msvc)
 ifeq ($$(findstring i686,$(1)),i686)
 NATIVE_DEPS_rustrt_native_$(1) += rust_try_msvc_32.ll
