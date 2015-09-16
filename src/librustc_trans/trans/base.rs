@@ -82,7 +82,7 @@ use trans::type_of::*;
 use trans::value::Value;
 use util::common::indenter;
 use util::sha2::Sha256;
-use util::nodemap::{NodeMap, NodeSet};
+use util::nodemap::{NodeMap, NodeSet, FnvHashMap, FnvHashSet};
 
 use arena::TypedArena;
 use libc::c_uint;
@@ -2821,6 +2821,21 @@ pub fn trans_crate(tcx: &ty::ctxt, analysis: ty::CrateAnalysis) -> CrateTranslat
         llmod: shared_ccx.metadata_llmod(),
     };
     let no_builtins = attr::contains_name(&krate.attrs, "no_builtins");
+
+    let mut monomorphizations = FnvHashMap();
+
+    for ccx in shared_ccx.iter() {
+        for e in ccx.monomorphized().borrow().iter() {
+            let mut m = monomorphizations.entry(e.0.def).or_insert_with(|| FnvHashSet());
+            let symbol = unsafe{ CStr::from_ptr(llvm::LLVMGetValueName(*e.1)) };
+            let symbol = str::from_utf8(symbol.to_bytes()).unwrap().to_string();
+            m.insert((symbol, e.0.params));
+        }
+    }
+
+    for pass in tcx.sess.plugin_codegen_passes.borrow_mut().iter_mut() {
+        pass.run(tcx, &monomorphizations);
+    }
 
     CrateTranslation {
         modules: modules,

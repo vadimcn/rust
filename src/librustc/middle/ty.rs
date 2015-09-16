@@ -2972,7 +2972,6 @@ impl<'a, 'tcx> ParameterEnvironment<'a, 'tcx> {
                         let fn_def_id = DefId::local(id);
                         let fn_scheme = cx.lookup_item_type(fn_def_id);
                         let fn_predicates = cx.lookup_predicates(fn_def_id);
-
                         cx.construct_parameter_environment(item.span,
                                                            &fn_scheme.generics,
                                                            &fn_predicates,
@@ -2998,6 +2997,27 @@ impl<'a, 'tcx> ParameterEnvironment<'a, 'tcx> {
                         cx.construct_parameter_environment(item.span,
                                                            &trait_def.generics,
                                                            &predicates,
+                                                           id)
+                    }
+                    _ => {
+                        cx.sess.span_bug(item.span,
+                                         "ParameterEnvironment::from_item():
+                                          can't create a parameter \
+                                          environment for this kind of item")
+                    }
+                }
+            }
+            Some(ast_map::NodeForeignItem(item)) => {
+                match item.node {
+                    ast::ForeignItemFn(..) => {
+                        // We assume this is a function.
+                        let fn_def_id = DefId::local(id);
+                        let fn_scheme = cx.lookup_item_type(fn_def_id);
+                        let fn_predicates = cx.lookup_predicates(fn_def_id);
+                        println!("@@@ {:?} {:?} {:?}", item, fn_scheme, fn_predicates);
+                        cx.construct_parameter_environment(item.span,
+                                                           &fn_scheme.generics,
+                                                           &fn_predicates,
                                                            id)
                     }
                     _ => {

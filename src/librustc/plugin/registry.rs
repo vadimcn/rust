@@ -10,7 +10,7 @@
 
 //! Used by plugin crates to tell `rustc` about the plugins they provide.
 
-use lint::{LintPassObject, LintId, Lint};
+use lint::{LintPassObject, LintId, Lint, CodegenPassObject};
 use session::Session;
 
 use syntax::ext::base::{SyntaxExtension, NamedSyntaxExtension, NormalTT};
@@ -58,6 +58,9 @@ pub struct Registry<'a> {
 
     #[doc(hidden)]
     pub attributes: Vec<(String, AttributeType)>,
+
+    #[doc(hidden)]
+    pub codegen_passes: Vec<CodegenPassObject>,
 }
 
 impl<'a> Registry<'a> {
@@ -72,6 +75,7 @@ impl<'a> Registry<'a> {
             lint_groups: HashMap::new(),
             llvm_passes: vec!(),
             attributes: vec!(),
+            codegen_passes: vec!(),
         }
     }
 
@@ -146,5 +150,9 @@ impl<'a> Registry<'a> {
     /// lint. `CrateLevel` attributes will not be allowed on anything other than a crate.
     pub fn register_attribute(&mut self, name: String, ty: AttributeType) {
         self.attributes.push((name, ty));
+    }
+
+    pub fn register_codegen_pass(&mut self, cg_pass: CodegenPassObject) {
+        self.codegen_passes.push(cg_pass);
     }
 }

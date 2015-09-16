@@ -462,7 +462,7 @@ pub fn phase_2_configure_and_expand(sess: &Session,
     });
 
     let Registry { syntax_exts, lint_passes, lint_groups,
-                   llvm_passes, attributes, .. } = registry;
+                   llvm_passes, attributes, codegen_passes, .. } = registry;
 
     {
         let mut ls = sess.lint_store.borrow_mut();
@@ -476,6 +476,7 @@ pub fn phase_2_configure_and_expand(sess: &Session,
 
         *sess.plugin_llvm_passes.borrow_mut() = llvm_passes;
         *sess.plugin_attributes.borrow_mut() = attributes.clone();
+        *sess.plugin_codegen_passes.borrow_mut() = codegen_passes;
     }
 
     // Lint plugins are registered; now we can process command line flags.
@@ -757,8 +758,10 @@ pub fn phase_4_translate_to_llvm(tcx: &ty::ctxt, analysis: ty::CrateAnalysis)
          dependency_format::calculate(&tcx.sess));
 
     // Option dance to work around the lack of stack once closures.
-    time(time_passes, "translation", move ||
-         trans::trans_crate(tcx, analysis))
+    let trans = time(time_passes, "translation", move ||
+         trans::trans_crate(tcx, analysis));
+
+    trans
 }
 
 /// Run LLVM itself, producing a bitcode file, assembly file or object file

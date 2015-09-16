@@ -723,7 +723,7 @@ pub fn check_item_type<'a,'tcx>(ccx: &CrateCtxt<'a,'tcx>, it: &'tcx ast::Item) {
             for item in &m.items {
                 intrinsic::check_platform_intrinsic_type(ccx, &**item);
             }
-        } else {
+        } else if m.abi != abi::CGeneric {
             for item in &m.items {
                 let pty = ccx.tcx.lookup_item_type(DefId::local(item.id));
                 if !pty.generics.types.is_empty() {

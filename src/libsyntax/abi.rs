@@ -44,6 +44,7 @@ pub enum Abi {
     // Multiplatform ABIs second
     Rust,
     C,
+    CGeneric,
     System,
     RustIntrinsic,
     RustCall,
@@ -93,6 +94,7 @@ const AbiDatas: &'static [AbiData] = &[
     // adjusting the indices below.
     AbiData {abi: Rust, name: "Rust" },
     AbiData {abi: C, name: "C" },
+    AbiData {abi: CGeneric, name: "C-generic" },
     AbiData {abi: System, name: "system" },
     AbiData {abi: RustIntrinsic, name: "rust-intrinsic" },
     AbiData {abi: RustCall, name: "rust-call" },

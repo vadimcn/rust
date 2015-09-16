@@ -37,6 +37,11 @@ use syntax::codemap::Span;
 use syntax::visit::FnKind;
 use syntax::ast;
 
+use middle::ty;
+use middle::def_id::DefId;
+use middle::subst::VecPerParamSpace;
+use util::nodemap::{FnvHashMap, FnvHashSet};
+
 pub use lint::context::{Context, LintStore, raw_emit_lint, check_crate, gather_attrs,
                         GatherNodeLevels};
 
@@ -250,6 +255,17 @@ pub enum LintSource {
 }
 
 pub type LevelSource = (Level, LintSource);
+
+pub type Monomorphizations<'tcx> = FnvHashMap<DefId, 
+                                        FnvHashSet<(String, 
+                                                    &'tcx VecPerParamSpace<ty::Ty<'tcx>>
+                                                   )>>;
+
+pub trait CodegenPass {
+    fn run<'tcx>(&mut self, tcx: &ty::ctxt<'tcx>, ms: &Monomorphizations<'tcx>);
+}
+
+pub type CodegenPassObject = Box<CodegenPass + 'static>;
 
 pub mod builtin;
 

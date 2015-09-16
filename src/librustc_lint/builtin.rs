@@ -637,11 +637,13 @@ impl<'a, 'tcx> ImproperCTypesVisitor<'a, 'tcx> {
                 FfiSafe
             }
 
-            ty::TyParam(..) | ty::TyInfer(..) | ty::TyError |
+            ty::TyInfer(..) | ty::TyError |
             ty::TyClosure(..) | ty::TyProjection(..) |
             ty::TyBareFn(Some(_), _) => {
+                println!("### Unexpected type in foreign function {:?}", ty.sty);
                 panic!("Unexpected type in foreign function")
             }
+            ty::TyParam(..) => FfiSafe
         }
     }
 

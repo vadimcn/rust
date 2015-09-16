@@ -33,7 +33,7 @@ use middle::subst::Substs;
 
 use std::cmp;
 use libc::c_uint;
-use syntax::abi::{Cdecl, Aapcs, C, Win64, Abi};
+use syntax::abi::{Cdecl, Aapcs, C, CGeneric, Win64, Abi};
 use syntax::abi::{PlatformIntrinsic, RustIntrinsic, Rust, RustCall, Stdcall, Fastcall, System};
 use syntax::codemap::Span;
 use syntax::parse::token::{InternedString, special_idents};
@@ -101,7 +101,7 @@ pub fn llvm_calling_convention(ccx: &CrateContext,
 
         Stdcall => llvm::X86StdcallCallConv,
         Fastcall => llvm::X86FastcallCallConv,
-        C => llvm::CCallConv,
+        C | CGeneric => llvm::CCallConv,
         Win64 => llvm::X86_64_Win64,
 
         // These API constants ought to be more specific...
@@ -478,7 +478,7 @@ pub fn trans_foreign_mod(ccx: &CrateContext, foreign_mod: &ast::ForeignMod) {
 
         if let ast::ForeignItemFn(ref decl, _) = foreign_item.node {
             match foreign_mod.abi {
-                Rust | RustIntrinsic | PlatformIntrinsic => {}
+                Rust | RustIntrinsic | PlatformIntrinsic | CGeneric => {}
                 abi => {
                     let ty = ccx.tcx().node_id_to_type(foreign_item.id);
                     match ty.sty {

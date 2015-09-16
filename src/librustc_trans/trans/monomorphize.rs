@@ -92,7 +92,8 @@ pub fn monomorphic_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
 
     if let ast_map::NodeForeignItem(_) = map_node {
         let abi = ccx.tcx().map.get_foreign_abi(fn_id.node);
-        if abi != abi::RustIntrinsic && abi != abi::PlatformIntrinsic {
+        if abi != abi::RustIntrinsic && abi != abi::PlatformIntrinsic &&
+           abi != abi::CGeneric {
             // Foreign externs don't have to be monomorphized.
             return (get_item_val(ccx, fn_id.node), mono_ty, true);
         }
@@ -132,9 +133,7 @@ pub fn monomorphic_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
 
     debug!("monomorphize_fn mangled to {}", s);
 
-    // This shouldn't need to option dance.
-    let mut hash_id = Some(hash_id);
-    let mut mk_lldecl = |abi: abi::Abi| {
+    let mk_lldecl = |abi: abi::Abi| {
         let lldecl = if abi != abi::Rust {
             foreign::decl_rust_fn_with_foreign_abi(ccx, mono_ty, &s[..])
         } else {
@@ -143,7 +142,7 @@ pub fn monomorphic_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
             declare::define_internal_rust_fn(ccx, &s, mono_ty)
         };
 
-        ccx.monomorphized().borrow_mut().insert(hash_id.take().unwrap(), lldecl);
+        ccx.monomorphized().borrow_mut().insert(hash_id.clone(), lldecl);
         lldecl
     };
     let setup_lldecl = |lldecl, attrs: &[ast::Attribute]| {
@@ -250,8 +249,15 @@ pub fn monomorphic_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
             d
         }
 
+        ast_map::NodeForeignItem(..) => {
+            let abi = ccx.tcx().map.get_foreign_abi(fn_id.node);
+            let lldecl = foreign::register_foreign_item_fn(ccx, abi, mono_ty, &s);
+            ccx.monomorphized().borrow_mut().insert(hash_id.clone(), lldecl);
+            //setup_lldecl(lldecl, &foreign_item.attrs);
+            lldecl
+        }
+
         // Ugh -- but this ensures any new variants won't be forgotten
-        ast_map::NodeForeignItem(..) |
         ast_map::NodeLifetime(..) |
         ast_map::NodeTyParam(..) |
         ast_map::NodeExpr(..) |
@@ -271,7 +277,7 @@ pub fn monomorphic_fn<'a, 'tcx>(ccx: &CrateContext<'a, 'tcx>,
     (lldecl, mono_ty, true)
 }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct MonoId<'tcx> {
     pub def: DefId,
     pub params: &'tcx subst::VecPerParamSpace<Ty<'tcx>>
