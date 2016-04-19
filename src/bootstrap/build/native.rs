@@ -59,7 +59,8 @@ pub fn llvm(build: &Build, target: &str) {
        .define("WITH_POLLY", "OFF")
        .define("LLVM_ENABLE_TERMINFO", "OFF")
        .define("LLVM_ENABLE_LIBEDIT", "OFF")
-       .define("LLVM_PARALLEL_COMPILE_JOBS", build.jobs().to_string());
+       .define("LLVM_PARALLEL_COMPILE_JOBS", build.jobs().to_string())
+       .define("LLVM_ENABLE_LTO", "ON");
 
     if target.starts_with("i686") {
         cfg.define("LLVM_BUILD_32_BITS", "ON");
@@ -90,8 +91,11 @@ pub fn llvm(build: &Build, target: &str) {
         }
         cfg.build_arg("-j").build_arg(build.jobs().to_string());
 
-        cfg.define("CMAKE_C_FLAGS", build.cflags(target).join(" "));
-        cfg.define("CMAKE_CXX_FLAGS", build.cflags(target).join(" "));
+        let mut cflags = build.cflags(target);
+        cflags.push("-O2".into());
+        cflags.push("-flto".into());
+        cfg.define("CMAKE_C_FLAGS", cflags.join(" "));
+        cfg.define("CMAKE_CXX_FLAGS", cflags.join(" "));
     }
 
     // FIXME: we don't actually need to build all LLVM tools and all LLVM
