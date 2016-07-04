@@ -1074,3 +1074,17 @@ extern "C" void LLVMRustUnsetComdat(LLVMValueRef V) {
     GlobalObject *GV = unwrap<GlobalObject>(V);
     GV->setComdat(nullptr);
 }
+
+extern "C" LLVMValueRef LLVMMetadataAsValue(LLVMContextRef context, LLVMMetadataRef metadata) {
+    if (metadata)
+        return wrap(MetadataAsValue::get(*unwrap(context), unwrapDIptr<MDNode>(metadata)));
+    else
+        return NULL;
+}
+
+extern "C" LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef value) {
+    if (value)
+        return wrap(cast<MDNode>(unwrap<MetadataAsValue>(value)->getMetadata()));
+    else
+        return NULL;
+}
