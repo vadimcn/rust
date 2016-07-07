@@ -451,6 +451,15 @@ extern "C" LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
         ));
 }
 
+extern "C" LLVMMetadataRef LLVMDIBuilderCreateLexicalBlockFile( 
+    DIBuilderRef Builder, 
+    LLVMMetadataRef Scope, 
+    LLVMMetadataRef File) { 
+    return wrap(Builder->createLexicalBlockFile( 
+        unwrapDI<DIDescriptor>(Scope), 
+        unwrapDI<DIFile>(File))); 
+} 
+
 extern "C" LLVMMetadataRef LLVMDIBuilderCreateStaticVariable(
     DIBuilderRef Builder,
     LLVMMetadataRef Context,

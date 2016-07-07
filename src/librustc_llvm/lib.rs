@@ -1893,6 +1893,11 @@ extern {
                                            Col: c_uint)
                                            -> DILexicalBlock;
 
+    pub fn LLVMDIBuilderCreateLexicalBlockFile(Builder: DIBuilderRef, 
+                                               Scope: DIScope, 
+                                               File: DIFile) 
+                                               -> DILexicalBlock; 
+ 
     pub fn LLVMDIBuilderCreateStaticVariable(Builder: DIBuilderRef,
                                              Context: DIScope,
                                              Name: *const c_char,
