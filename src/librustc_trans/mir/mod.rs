@@ -106,13 +106,31 @@ pub struct MirContext<'bcx, 'tcx:'bcx> {
 
 impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
     pub fn debug_loc(&mut self, source_info: mir::SourceInfo) -> DebugLoc {
-        let scope_id = source_info.scope;
+        let mut scope_id = source_info.scope;
         let mut span = source_info.span;
         let cm = self.fcx.ccx.sess().codemap();
-        while span.expn_id != NO_EXPANSION {
-            span = cm.source_callsite(span);
+        if span.expn_id != NO_EXPANSION {
+            println!("--- span = {} {:?} | scope = {} {:?}",
+                            cm.span_to_string(span), span.expn_id,
+                            cm.span_to_string(self.mir.visibility_scopes[scope_id].span),
+                            self.mir.visibility_scopes[scope_id].span.expn_id);
+            while span.expn_id != NO_EXPANSION {
+                span = cm.source_callsite(span);
+                println!("span -> {} {:?}", cm.span_to_string(span), span.expn_id);
+            }
+            while self.mir.visibility_scopes[scope_id].span.expn_id != NO_EXPANSION {
+                let parent_scope_id = self.mir.visibility_scopes[scope_id].parent_scope;
+                if let Some(parent_scope_id) = parent_scope_id {
+                    scope_id = parent_scope_id;
+                    println!("scope -> {} {:?}",
+                        cm.span_to_string(self.mir.visibility_scopes[scope_id].span),
+                        self.mir.visibility_scopes[scope_id].span.expn_id);
+                } else {
+                    println!("No parent scope");
+                    break;
+                }
+            }
         }
-
         let mut scope_metadata = self.scopes[scope_id].scope_metadata;
         if span.lo < self.scopes[scope_id].start_pos ||
            span.lo > self.scopes[scope_id].end_pos {
