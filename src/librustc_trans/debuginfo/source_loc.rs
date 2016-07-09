@@ -108,21 +108,25 @@ pub fn set_source_location(fcx: &FunctionContext,
     }
 
     let dbg_loc = if function_debug_context.source_locations_enabled.get() {
-        let (scope, span) = match debug_loc {
+        match debug_loc {
             DebugLoc::At(node_id, span) => {
-                (scope_metadata(fcx, node_id, span), span)
+                let loc = span_start(fcx.ccx, span);
+                let scope = scope_metadata(fcx, node_id, span);
+                KnownLocation(scope, loc.line, loc.col.to_usize(), None)                
             }
-            DebugLoc::ScopeAt(scope, span) => (scope, span),
-            DebugLoc::None => {
-                set_debug_location(fcx.ccx, builder, UnknownLocation);
-                return;
+            DebugLoc::ScopeAt(scope, span, inlined_at) => {
+                let loc = span_start(fcx.ccx, span);
+                let inlined_at_loc = match inlined_at {
+                    Some((scope, span)) => {
+                        let loc = span_start(fcx.ccx, span);
+                        Some((scope, loc.line, loc.col.to_usize()))
+                    }
+                    None => None
+                };
+                KnownLocation(scope, loc.line, loc.col.to_usize(), inlined_at_loc)
             }
-        };
-
-        debug!("set_source_location: {}",
-               fcx.ccx.sess().codemap().span_to_string(span));
-        let loc = span_start(fcx.ccx, span);
-        InternalDebugLocation::new(scope, loc.line, loc.col.to_usize())
+            DebugLoc::None => UnknownLocation
+        }
     } else {
         UnknownLocation
     };
@@ -173,20 +177,15 @@ pub fn start_emitting_source_locations(fcx: &FunctionContext) {
     }
 }
 
-
 #[derive(Copy, Clone, PartialEq)]
 pub enum InternalDebugLocation {
-    KnownLocation { scope: DIScope, line: usize, col: usize },
+    KnownLocation(DIScope, usize, usize, Option<(DIScope, usize, usize)>),
     UnknownLocation
 }
 
 impl InternalDebugLocation {
     pub fn new(scope: DIScope, line: usize, col: usize) -> InternalDebugLocation {
-        KnownLocation {
-            scope: scope,
-            line: line,
-            col: col,
-        }
+        KnownLocation(scope, line, col, None)
     }
 }
 
@@ -200,18 +199,33 @@ pub fn set_debug_location(cx: &CrateContext,
     }
 
     let metadata_node = match debug_location {
-        KnownLocation { scope, line, .. } => {
+        KnownLocation(scope, line, _, inlined_at) => {
             // Always set the column to zero like Clang and GCC
             let col = UNKNOWN_COLUMN_NUMBER;
             debug!("setting debug location to {} {}", line, col);
-
+            let inlined_at_loc = match inlined_at {
+                Some((scope, line, _)) => {
+                    let col = UNKNOWN_COLUMN_NUMBER;                   
+                    unsafe {
+                        llvm::LLVMValueAsMetadata(
+                            llvm::LLVMDIBuilderCreateDebugLocation(
+                                debug_context(cx).llcontext,
+                                line as c_uint,
+                                col as c_uint,
+                                scope,
+                                ptr::null_mut())
+                        )
+                    }             
+                },
+                None => ptr::null_mut()
+            };
             unsafe {
                 llvm::LLVMDIBuilderCreateDebugLocation(
                     debug_context(cx).llcontext,
                     line as c_uint,
                     col as c_uint,
                     scope,
-                    ptr::null_mut())
+                    inlined_at_loc)
             }
         }
         UnknownLocation => {

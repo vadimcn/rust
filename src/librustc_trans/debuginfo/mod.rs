@@ -541,7 +541,7 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DebugLoc {
     At(ast::NodeId, Span),
-    ScopeAt(DIScope, Span),
+    ScopeAt(DIScope, Span, Option<(DIScope, Span)>),
     None
 }
 

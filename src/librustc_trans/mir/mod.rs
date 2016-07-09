@@ -20,7 +20,7 @@ use debuginfo::{self, declare_local, DebugLoc, VariableAccess, VariableKind};
 use machine;
 use type_of;
 
-use syntax_pos::{DUMMY_SP, NO_EXPANSION};
+use syntax_pos::{DUMMY_SP, NO_EXPANSION, Span};
 use syntax::parse::token::keywords;
 
 use std::ops::Deref;
@@ -106,10 +106,13 @@ pub struct MirContext<'bcx, 'tcx:'bcx> {
 
 impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
     pub fn debug_loc(&mut self, source_info: mir::SourceInfo) -> DebugLoc {
-        let mut scope_id = source_info.scope;
-        let mut span = source_info.span;
-        let cm = self.fcx.ccx.sess().codemap();
-        if span.expn_id != NO_EXPANSION {
+        if source_info.span.expn_id == NO_EXPANSION {
+            DebugLoc::ScopeAt(self.scope_metadata_for_span(source_info.scope, source_info.span), 
+                              source_info.span, None)
+        } else {
+            let mut scope_id = source_info.scope;
+            let mut span = source_info.span;
+            let cm = self.fcx.ccx.sess().codemap();            
             println!("--- span = {} {:?} | scope = {} {:?}",
                             cm.span_to_string(span), span.expn_id,
                             cm.span_to_string(self.mir.visibility_scopes[scope_id].span),
@@ -130,18 +133,24 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
                     break;
                 }
             }
+            DebugLoc::ScopeAt(self.scope_metadata_for_span(source_info.scope, span), source_info.span, 
+                              Some((self.scope_metadata_for_span(scope_id, span), span)))
         }
-        let mut scope_metadata = self.scopes[scope_id].scope_metadata;
+    }
+
+    fn scope_metadata_for_span(&self, scope_id: mir::VisibilityScope, span: Span) -> llvm::debuginfo::DIScope {
+        let scope_metadata = self.scopes[scope_id].scope_metadata;
         if span.lo < self.scopes[scope_id].start_pos ||
            span.lo > self.scopes[scope_id].end_pos {
             // If span is not in the same file as the scope_span, we need to create
             // a new DIScope with the correct file metadata.
-            scope_metadata = debuginfo::extend_scope_to_file(self.fcx.ccx,
-                                                             scope_metadata,
-                                                             &cm.lookup_char_pos(span.lo).file);
+            let cm = self.fcx.ccx.sess().codemap();
+            debuginfo::extend_scope_to_file(self.fcx.ccx,
+                                            scope_metadata,
+                                            &cm.lookup_char_pos(span.lo).file)
+        } else {
+            scope_metadata
         }
-
-        DebugLoc::ScopeAt(scope_metadata, span)
     }
 }
 
