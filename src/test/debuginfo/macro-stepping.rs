@@ -17,29 +17,31 @@
 
 // gdb-command:run
 // gdb-command:next
-// gdb-check:MARKER1
+// gdb-check:#loc1
 // gdb-command:next
-// gdb-check:MARKER2
+// gdb-check:#loc2
 // gdb-command:next
-// gdb-check:MARKER3
+// gdb-check:#loc3
 // gdb-command:next
-// gdb-check:MARKER4
+// gdb-check:#loc4
 // gdb-command:next
-// gdb-check:MARKER5
+// gdb-check:#loc5
 
 // === LLDB TESTS ==================================================================================
 
 // lldb-command:run
 // lldb-command:next
-// lldb-check:MARKER1
+// lldb-check:->[...]#loc1
 // lldb-command:next
-// lldb-check:MARKER2
+// lldb-check:->[...]#loc2
 // lldb-command:next
-// lldb-check:MARKER3
+// lldb-check:->[...]#loc3
 // lldb-command:next
-// lldb-check:MARKER4
+// lldb-check:->[...]#loc4
 // lldb-command:next
-// lldb-check:MARKER5
+// lldb-check:->[...]#loc5
+
+#![allow(unused)]
 
 macro_rules! foo {
     () => {
@@ -59,11 +61,11 @@ macro_rules! foo2 {
 
 fn main() {
     zzz(); // #break
-    foo!(); // MARKER1
-    foo2!(); // MARKER2
-    let x = vec![42]; // MARKER3
-    println!("Hello world"); // MARKER4
-    zzz(); // MARKER5
+    foo!(); // #loc1
+    foo2!(); // #loc2
+    let x = vec![42]; // #loc3
+    println!("Hello world"); // #loc4
+    zzz(); // #loc5
 }
 
 fn zzz() {()}
