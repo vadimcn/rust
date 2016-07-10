@@ -42,7 +42,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::CString;
 use std::ptr;
 
-use syntax_pos::{self, Span, Pos};
+use syntax_pos::{self, Span};
 use syntax::ast;
 use syntax::attr::IntType;
 
@@ -508,7 +508,7 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                     argument_index)
             };
             source_loc::set_debug_location(cx, None,
-                InternalDebugLocation::new(scope_metadata, loc.line, loc.col.to_usize()));
+                InternalDebugLocation::KnownLocation(scope_metadata, span.lo, None));
             unsafe {
                 let debug_loc = llvm::LLVMGetCurrentDebugLocation(cx.raw_builder());
                 let instr = llvm::LLVMDIBuilderInsertDeclareAtEnd(
