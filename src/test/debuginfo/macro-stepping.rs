@@ -11,35 +11,50 @@
 // ignore-windows
 // min-lldb-version: 310
 
-// compile-flags:-g
+// compile-flags:-g -Zorbit
 
 // === GDB TESTS ===================================================================================
 
 // gdb-command:run
 // gdb-command:next
-// gdb-check:#loc1
+// gdb-command:f
+// gdb-check:[...]#loc1[...]
 // gdb-command:next
-// gdb-check:#loc2
+// gdb-command:f
+// gdb-check:[...]#loc2[...]
 // gdb-command:next
-// gdb-check:#loc3
+// gdb-command:f
+// gdb-check:[...]#loc3[...]
 // gdb-command:next
-// gdb-check:#loc4
+// gdb-command:f
+// gdb-check:[...]#loc4[...]
 // gdb-command:next
-// gdb-check:#loc5
+// gdb-command:f
+// gdb-check:[...]#loc5[...]
 
 // === LLDB TESTS ==================================================================================
 
+// lldb-command:set set stop-line-count-before 0
+// lldb-command:set set stop-line-count-after 1
+// Can't set both to zero or lldb will stop printing source at all.  So it will output the current
+// line and the next.  We deal with this by having at least 2 lines between the #loc's
+
 // lldb-command:run
 // lldb-command:next
-// lldb-check:->[...]#loc1
+// lldb-command:f
+// lldb-check:[...]#loc1[...]
 // lldb-command:next
-// lldb-check:->[...]#loc2
+// lldb-command:f
+// lldb-check:[...]#loc2[...]
 // lldb-command:next
-// lldb-check:->[...]#loc3
+// lldb-command:f
+// lldb-check:[...]#loc3[...]
 // lldb-command:next
-// lldb-check:->[...]#loc4
+// lldb-command:f
+// lldb-check:[...]#loc4[...]
 // lldb-command:next
-// lldb-check:->[...]#loc5
+// lldb-command:f
+// lldb-check:[...]#loc5[...]
 
 #![allow(unused)]
 
@@ -61,10 +76,15 @@ macro_rules! foo2 {
 
 fn main() {
     zzz(); // #break
+
     foo!(); // #loc1
+
     foo2!(); // #loc2
+
     let x = vec![42]; // #loc3
-    println!("Hello world"); // #loc4
+
+    println!("Hello {}", "world"); // #loc4
+
     zzz(); // #loc5
 }
 
