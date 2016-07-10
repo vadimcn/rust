@@ -107,43 +107,41 @@ pub struct MirContext<'bcx, 'tcx:'bcx> {
 impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
     pub fn debug_loc(&mut self, source_info: mir::SourceInfo) -> DebugLoc {
         if source_info.span.expn_id == NO_EXPANSION {
-            DebugLoc::ScopeAt(self.scope_metadata_for_span(source_info.scope, source_info.span), 
-                              source_info.span, None)
+            let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
+            DebugLoc::ScopeAt(scope_metadata, source_info.span, None)
         } else {
             let mut scope_id = source_info.scope;
             let mut span = source_info.span;
-            let cm = self.fcx.ccx.sess().codemap();            
-            println!("--- span = {} {:?} | scope = {} {:?}",
-                            cm.span_to_string(span), span.expn_id,
-                            cm.span_to_string(self.mir.visibility_scopes[scope_id].span),
-                            self.mir.visibility_scopes[scope_id].span.expn_id);
+            let cm = self.fcx.ccx.sess().codemap();
+            // Step out of any macro expansions
             while span.expn_id != NO_EXPANSION {
                 span = cm.source_callsite(span);
                 println!("span -> {} {:?}", cm.span_to_string(span), span.expn_id);
             }
+            // Ditto for scope
             while self.mir.visibility_scopes[scope_id].span.expn_id != NO_EXPANSION {
                 let parent_scope_id = self.mir.visibility_scopes[scope_id].parent_scope;
                 if let Some(parent_scope_id) = parent_scope_id {
                     scope_id = parent_scope_id;
-                    println!("scope -> {} {:?}",
-                        cm.span_to_string(self.mir.visibility_scopes[scope_id].span),
-                        self.mir.visibility_scopes[scope_id].span.expn_id);
                 } else {
-                    println!("No parent scope");
                     break;
                 }
             }
-            DebugLoc::ScopeAt(self.scope_metadata_for_span(source_info.scope, span), source_info.span, 
+            let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
+            DebugLoc::ScopeAt(scope_metadata, source_info.span, 
                               Some((self.scope_metadata_for_span(scope_id, span), span)))
         }
     }
 
-    fn scope_metadata_for_span(&self, scope_id: mir::VisibilityScope, span: Span) -> llvm::debuginfo::DIScope {
+    // LLVM DILocation's specify only the line and the column; the file part is taken from the 
+    // containing DIScope.  It may so happen (around macro expansion sites) that the current span 
+    // points into a different file than DIScope created for the surrounding visibility scope.
+    // In such cases we need to create an artificial scope with the correct file info.
+    fn scope_metadata_for_span(&self, scope_id: mir::VisibilityScope, span: Span) 
+                               -> llvm::debuginfo::DIScope {
         let scope_metadata = self.scopes[scope_id].scope_metadata;
         if span.lo < self.scopes[scope_id].start_pos ||
            span.lo > self.scopes[scope_id].end_pos {
-            // If span is not in the same file as the scope_span, we need to create
-            // a new DIScope with the correct file metadata.
             let cm = self.fcx.ccx.sess().codemap();
             debuginfo::extend_scope_to_file(self.fcx.ccx,
                                             scope_metadata,
