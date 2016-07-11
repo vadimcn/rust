@@ -111,7 +111,7 @@ pub fn set_source_location(fcx: &FunctionContext,
         match debug_loc {
             DebugLoc::At(node_id, span) => {
                 let scope = scope_metadata(fcx, node_id, span);
-                KnownLocation(scope, span.lo, None)                
+                KnownLocation(scope, span.lo, None)
             }
             DebugLoc::ScopeAt(scope, span, inlined_at) => {
                 let inlined_at_loc = match inlined_at {
@@ -193,7 +193,7 @@ pub fn set_debug_location(cx: &CrateContext,
 
             let inlined_at_loc = match inlined_at {
                 Some((scope, pos)) => {
-                    let loc = cm.lookup_char_pos(pos);               
+                    let loc = cm.lookup_char_pos(pos);
                     unsafe {
                         llvm::LLVMValueAsMetadata(
                             llvm::LLVMDIBuilderCreateDebugLocation(
@@ -203,13 +203,13 @@ pub fn set_debug_location(cx: &CrateContext,
                                 scope,
                                 ptr::null_mut())
                         )
-                    }             
+                    }
                 },
                 None => ptr::null_mut()
             };
 
             let loc = cm.lookup_char_pos(pos);
-            debug!("setting debug location to line {}", loc.line);            
+            debug!("setting debug location to line {}", loc.line);
             // Set the column to zero like Clang and GCC
             unsafe {
                 llvm::LLVMDIBuilderCreateDebugLocation(

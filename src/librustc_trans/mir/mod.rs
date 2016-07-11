@@ -109,9 +109,9 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
         match self.fcx.debug_context {
             FunctionDebugContext::DebugInfoDisabled |
             FunctionDebugContext::FunctionWithoutDebugInfo => {
-                // Can't return DebugLoc::None here because intrinsic::trans_intrinsic_call() 
+                // Can't return DebugLoc::None here because intrinsic::trans_intrinsic_call()
                 // relies on debug location to obtain call site span.
-                return DebugLoc::ScopeAt(self.scopes[source_info.scope].scope_metadata, 
+                return DebugLoc::ScopeAt(self.scopes[source_info.scope].scope_metadata,
                                          source_info.span, None);
             }
             FunctionDebugContext::RegularContext(_) =>{}
@@ -138,16 +138,16 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
                 }
             }
             let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
-            DebugLoc::ScopeAt(scope_metadata, source_info.span, 
+            DebugLoc::ScopeAt(scope_metadata, source_info.span,
                               Some((self.scope_metadata_for_span(scope_id, span), span)))
         }
     }
 
-    // LLVM DILocation's specify only the line and the column; the file part is taken from the 
-    // containing DIScope.  It may so happen (around macro expansion sites) that the current span 
+    // LLVM DILocation's specify only the line and the column; the file part is taken from the
+    // containing DIScope.  It may so happen (around macro expansion sites) that the current span
     // points into a different file than DIScope created for the surrounding visibility scope.
     // In such cases we need to create an artificial scope with the correct file info.
-    fn scope_metadata_for_span(&self, scope_id: mir::VisibilityScope, span: Span) 
+    fn scope_metadata_for_span(&self, scope_id: mir::VisibilityScope, span: Span)
                                -> llvm::debuginfo::DIScope {
         let scope_metadata = self.scopes[scope_id].scope_metadata;
         if span.lo < self.scopes[scope_id].start_pos ||
