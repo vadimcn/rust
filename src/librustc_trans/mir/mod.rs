@@ -16,7 +16,7 @@ use rustc::mir::tcx::LvalueTy;
 use session::config::FullDebugInfo;
 use base;
 use common::{self, Block, BlockAndBuilder, CrateContext, FunctionContext, C_null};
-use debuginfo::{self, declare_local, DebugLoc, VariableAccess, VariableKind};
+use debuginfo::{self, declare_local, DebugLoc, VariableAccess, VariableKind, FunctionDebugContext};
 use machine;
 use type_of;
 
@@ -106,6 +106,17 @@ pub struct MirContext<'bcx, 'tcx:'bcx> {
 
 impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
     pub fn debug_loc(&mut self, source_info: mir::SourceInfo) -> DebugLoc {
+        match self.fcx.debug_context {
+            FunctionDebugContext::DebugInfoDisabled |
+            FunctionDebugContext::FunctionWithoutDebugInfo => {
+                // Can't return DebugLoc::None here because intrinsic::trans_intrinsic_call() 
+                // relies on debug location to obtain call site span.
+                return DebugLoc::ScopeAt(self.scopes[source_info.scope].scope_metadata, 
+                                         source_info.span, None);
+            }
+            FunctionDebugContext::RegularContext(_) =>{}
+        }
+
         if source_info.span.expn_id == NO_EXPANSION {
             let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
             DebugLoc::ScopeAt(scope_metadata, source_info.span, None)
@@ -116,7 +127,6 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
             // Step out of any macro expansions
             while span.expn_id != NO_EXPANSION {
                 span = cm.source_callsite(span);
-                println!("span -> {} {:?}", cm.span_to_string(span), span.expn_id);
             }
             // Ditto for scope
             while self.mir.visibility_scopes[scope_id].span.expn_id != NO_EXPANSION {
