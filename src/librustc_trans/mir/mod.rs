@@ -121,20 +121,20 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
             let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
             DebugLoc::ScopeAt(scope_metadata, source_info.span, None)
         } else {
+            // If the current span is a result of a macro expansion, we walk expansion backtrace
+            // till we reach the outermost expansion site.
             let mut scope_id = source_info.scope;
             let mut span = source_info.span;
             let cm = self.fcx.ccx.sess().codemap();
-            // Step out of any macro expansions
             while span.expn_id != NO_EXPANSION {
                 span = cm.source_callsite(span);
             }
             // Ditto for scope
             while self.mir.visibility_scopes[scope_id].span.expn_id != NO_EXPANSION {
                 let parent_scope_id = self.mir.visibility_scopes[scope_id].parent_scope;
-                if let Some(parent_scope_id) = parent_scope_id {
-                    scope_id = parent_scope_id;
-                } else {
-                    break;
+                scope_id = match parent_scope_id {
+                    Some(id) => id,
+                    None => break // Can happen if the function itself is defined in an expansion
                 }
             }
             let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
