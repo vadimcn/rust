@@ -45,6 +45,8 @@ impl<'a, 'tcx> LinkerInfo {
                      cmd: &'a mut Command,
                      sess: &'a Session) -> Box<Linker+'a> {
         if sess.target.target.options.is_like_msvc {
+            cmd.arg("/NODEFAULTLIB:vcruntime.lib");
+            cmd.arg("libvcruntime.lib");
             Box::new(MsvcLinker {
                 cmd: cmd,
                 sess: sess,
