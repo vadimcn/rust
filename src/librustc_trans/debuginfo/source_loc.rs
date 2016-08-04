@@ -10,7 +10,7 @@
 
 use self::InternalDebugLocation::*;
 
-use super::utils::{debug_context, span_start};
+use super::utils::debug_context;
 use super::metadata::{scope_metadata,UNKNOWN_COLUMN_NUMBER};
 use super::{FunctionDebugContext, DebugLoc};
 
@@ -21,7 +21,7 @@ use common::{NodeIdAndSpan, CrateContext, FunctionContext};
 
 use libc::c_uint;
 use std::ptr;
-use syntax_pos::{self, Span, Pos};
+use syntax_pos::{self, Span, BytePos};
 use syntax::ast;
 
 pub fn get_cleanup_debug_loc_for_ast_node<'a, 'tcx>(cx: &CrateContext<'a, 'tcx>,
@@ -108,21 +108,20 @@ pub fn set_source_location(fcx: &FunctionContext,
     }
 
     let dbg_loc = if function_debug_context.source_locations_enabled.get() {
-        let (scope, span) = match debug_loc {
+        match debug_loc {
             DebugLoc::At(node_id, span) => {
-                (scope_metadata(fcx, node_id, span), span)
+                let scope = scope_metadata(fcx, node_id, span);
+                KnownLocation(scope, span.lo, None)
             }
-            DebugLoc::ScopeAt(scope, span) => (scope, span),
-            DebugLoc::None => {
-                set_debug_location(fcx.ccx, builder, UnknownLocation);
-                return;
+            DebugLoc::ScopeAt(scope, span, inlined_at) => {
+                let inlined_at_loc = match inlined_at {
+                    Some((scope, span)) => Some((scope, span.lo)),
+                    None => None
+                };
+                KnownLocation(scope, span.lo, inlined_at_loc)
             }
-        };
-
-        debug!("set_source_location: {}",
-               fcx.ccx.sess().codemap().span_to_string(span));
-        let loc = span_start(fcx.ccx, span);
-        InternalDebugLocation::new(scope, loc.line, loc.col.to_usize())
+            DebugLoc::None => UnknownLocation
+        }
     } else {
         UnknownLocation
     };
@@ -173,21 +172,10 @@ pub fn start_emitting_source_locations(fcx: &FunctionContext) {
     }
 }
 
-
 #[derive(Copy, Clone, PartialEq)]
 pub enum InternalDebugLocation {
-    KnownLocation { scope: DIScope, line: usize, col: usize },
+    KnownLocation(DIScope, BytePos, Option<(DIScope, BytePos)>),
     UnknownLocation
-}
-
-impl InternalDebugLocation {
-    pub fn new(scope: DIScope, line: usize, col: usize) -> InternalDebugLocation {
-        KnownLocation {
-            scope: scope,
-            line: line,
-            col: col,
-        }
-    }
 }
 
 pub fn set_debug_location(cx: &CrateContext,
@@ -199,19 +187,37 @@ pub fn set_debug_location(cx: &CrateContext,
         }
     }
 
+    let cm = cx.sess().codemap();
     let metadata_node = match debug_location {
-        KnownLocation { scope, line, .. } => {
-            // Always set the column to zero like Clang and GCC
-            let col = UNKNOWN_COLUMN_NUMBER;
-            debug!("setting debug location to {} {}", line, col);
+        KnownLocation(scope, pos, inlined_at) => {
 
+            let inlined_at_loc = match inlined_at {
+                Some((scope, pos)) => {
+                    let loc = cm.lookup_char_pos(pos);
+                    unsafe {
+                        llvm::LLVMRustValueAsMetadata(
+                            llvm::LLVMRustDIBuilderCreateDebugLocation(
+                                debug_context(cx).llcontext,
+                                loc.line as c_uint,
+                                UNKNOWN_COLUMN_NUMBER as c_uint,
+                                scope,
+                                ptr::null_mut())
+                        )
+                    }
+                },
+                None => ptr::null_mut()
+            };
+
+            let loc = cm.lookup_char_pos(pos);
+            debug!("setting debug location to line {}", loc.line);
+            // Set the column to zero like Clang and GCC
             unsafe {
                 llvm::LLVMRustDIBuilderCreateDebugLocation(
                     debug_context(cx).llcontext,
-                    line as c_uint,
-                    col as c_uint,
+                    loc.line as c_uint,
+                    UNKNOWN_COLUMN_NUMBER as c_uint,
                     scope,
-                    ptr::null_mut())
+                    inlined_at_loc)
             }
         }
         UnknownLocation => {

@@ -43,7 +43,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::CString;
 use std::ptr;
 
-use syntax_pos::{self, Span, Pos};
+use syntax_pos::{self, Span};
 use syntax::ast;
 use syntax::attr::IntType;
 
@@ -55,7 +55,7 @@ pub mod metadata;
 mod create_scope_map;
 mod source_loc;
 
-pub use self::create_scope_map::create_mir_scopes;
+pub use self::create_scope_map::{create_mir_scopes, MirDebugScope};
 pub use self::source_loc::start_emitting_source_locations;
 pub use self::source_loc::get_cleanup_debug_loc_for_ast_node;
 pub use self::source_loc::with_source_location_override;
@@ -64,6 +64,7 @@ pub use self::metadata::create_argument_metadata;
 pub use self::metadata::create_captured_var_metadata;
 pub use self::metadata::create_global_var_metadata;
 pub use self::metadata::create_local_var_metadata;
+pub use self::metadata::extend_scope_to_file;
 
 #[allow(non_upper_case_globals)]
 const DW_TAG_auto_variable: c_uint = 0x100;
@@ -509,7 +510,7 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                     argument_index)
             };
             source_loc::set_debug_location(cx, None,
-                InternalDebugLocation::new(scope_metadata, loc.line, loc.col.to_usize()));
+                InternalDebugLocation::KnownLocation(scope_metadata, span.lo, None));
             unsafe {
                 let debug_loc = llvm::LLVMGetCurrentDebugLocation(cx.raw_builder());
                 let instr = llvm::LLVMRustDIBuilderInsertDeclareAtEnd(
@@ -542,7 +543,7 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DebugLoc {
     At(ast::NodeId, Span),
-    ScopeAt(DIScope, Span),
+    ScopeAt(DIScope, Span, Option<(DIScope, Span)>),
     None
 }
 

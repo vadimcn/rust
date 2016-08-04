@@ -521,6 +521,15 @@ extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateLexicalBlock(
         ));
 }
 
+extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateLexicalBlockFile(
+    LLVMRustDIBuilderRef Builder,
+    LLVMRustMetadataRef Scope,
+    LLVMRustMetadataRef File) {
+    return wrap(Builder->createLexicalBlockFile(
+        unwrapDI<DIDescriptor>(Scope),
+        unwrapDI<DIFile>(File)));
+}
+
 extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateStaticVariable(
     LLVMRustDIBuilderRef Builder,
     LLVMRustMetadataRef Context,
@@ -1222,4 +1231,19 @@ extern "C" void LLVMRustSetComdat(LLVMModuleRef M, LLVMValueRef V, const char *N
 extern "C" void LLVMRustUnsetComdat(LLVMValueRef V) {
     GlobalObject *GV = unwrap<GlobalObject>(V);
     GV->setComdat(nullptr);
+}
+
+extern "C" LLVMValueRef LLVMRustMetadataAsValue(LLVMContextRef context,
+                                                LLVMRustMetadataRef metadata) {
+    if (metadata)
+        return wrap(MetadataAsValue::get(*unwrap(context), unwrapDIptr<MDNode>(metadata)));
+    else
+        return NULL;
+}
+
+extern "C" LLVMRustMetadataRef LLVMRustValueAsMetadata(LLVMValueRef value) {
+    if (value)
+        return wrap(cast<MDNode>(unwrap<MetadataAsValue>(value)->getMetadata()));
+    else
+        return NULL;
 }

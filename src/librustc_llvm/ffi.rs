@@ -637,6 +637,8 @@ extern {
     pub fn LLVMAddNamedMetadataOperand(M: ModuleRef,
                                        Str: *const c_char,
                                        Val: ValueRef);
+    pub fn LLVMRustMetadataAsValue(context: ContextRef, metadata: MetadataRef) -> ValueRef;
+    pub fn LLVMRustValueAsMetadata(value: ValueRef) -> MetadataRef;
 
     /* Operations on scalar constants */
     pub fn LLVMConstInt(IntTy: TypeRef, N: c_ulonglong, SignExtend: Bool)
@@ -1795,6 +1797,11 @@ extern {
                                                Line: c_uint,
                                                Col: c_uint)
                                                -> DILexicalBlock;
+
+    pub fn LLVMRustDIBuilderCreateLexicalBlockFile(Builder: DIBuilderRef,
+                                                   Scope: DIScope,
+                                                   File: DIFile)
+                                                   -> DILexicalBlock;
 
     pub fn LLVMRustDIBuilderCreateStaticVariable(Builder: DIBuilderRef,
                                                  Context: DIScope,
