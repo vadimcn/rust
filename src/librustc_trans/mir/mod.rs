@@ -106,6 +106,7 @@ pub struct MirContext<'bcx, 'tcx:'bcx> {
 
 impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
     pub fn debug_loc(&mut self, source_info: mir::SourceInfo) -> DebugLoc {
+        // Bail out if debug info emission is not enabled.
         match self.fcx.debug_context {
             FunctionDebugContext::DebugInfoDisabled |
             FunctionDebugContext::FunctionWithoutDebugInfo => {
@@ -121,8 +122,10 @@ impl<'blk, 'tcx> MirContext<'blk, 'tcx> {
             let scope_metadata = self.scope_metadata_for_span(source_info.scope, source_info.span);
             DebugLoc::ScopeAt(scope_metadata, source_info.span, None)
         } else {
-            // If current span is a result of a macro expansion, we walk up the expansion chain
-            // till we reach the outermost expansion site.
+            // In order to have good line stepping behavior in debugger, we model macro
+            // expansions as inlined functions. If the current span is a result of a macro
+            // expansion, we walk up the expansion chain till we reach the outermost expansion
+            // site, which is then used as "inlined at" location.
             let mut scope_id = source_info.scope;
             let mut span = source_info.span;
             let cm = self.fcx.ccx.sess().codemap();
@@ -205,15 +208,37 @@ pub fn trans_mir<'blk, 'tcx: 'blk>(fcx: &'blk FunctionContext<'blk, 'tcx>) {
          analyze::cleanup_kinds(bcx, &mir))
     });
 
+    // Allocate a `Block` for every basic block
+    let block_bcxs: IndexVec<mir::BasicBlock, Block<'blk,'tcx>> =
+        mir.basic_blocks().indices().map(|bb| {
+            if bb == mir::START_BLOCK {
+                fcx.new_block("start", None)
+            } else {
+                fcx.new_block(&format!("{:?}", bb), None)
+            }
+        }).collect();
+
     // Compute debuginfo scopes from MIR scopes.
     let scopes = debuginfo::create_mir_scopes(fcx);
 
+    let mut mircx = MirContext {
+        mir: mir.clone(),
+        fcx: fcx,
+        llpersonalityslot: None,
+        blocks: block_bcxs,
+        unreachable_block: None,
+        cleanup_kinds: cleanup_kinds,
+        landing_pads: IndexVec::from_elem(None, mir.basic_blocks()),
+        scopes: scopes,
+        locals: IndexVec::new(),
+    };
+
     // Allocate variable and temp allocas
-    let locals = {
-        let args = arg_local_refs(&bcx, &mir, &scopes, &lvalue_locals);
+    mircx.locals = {
+        let args = arg_local_refs(&bcx, &mir, &mircx.scopes, &lvalue_locals);
         let vars = mir.var_decls.iter().enumerate().map(|(i, decl)| {
             let ty = bcx.monomorphize(&decl.ty);
-            let debug_scope = scopes[decl.source_info.scope];
+            let debug_scope = mircx.scopes[decl.source_info.scope];
             let dbg = debug_scope.is_valid() && bcx.sess().opts.debuginfo == FullDebugInfo;
 
             let local = mir.local_index(&mir::Lvalue::Var(mir::Var::new(i))).unwrap();
@@ -223,11 +248,16 @@ pub fn trans_mir<'blk, 'tcx: 'blk>(fcx: &'blk FunctionContext<'blk, 'tcx>) {
 
             let lvalue = LvalueRef::alloca(&bcx, ty, &decl.name.as_str());
             if dbg {
-                bcx.with_block(|bcx| {
-                    declare_local(bcx, decl.name, ty, debug_scope.scope_metadata,
-                                VariableAccess::DirectVariable { alloca: lvalue.llval },
-                                VariableKind::LocalVariable, decl.source_info.span);
-                });
+                let dbg_loc = mircx.debug_loc(decl.source_info);
+                if let DebugLoc::ScopeAt(scope, span, inlined_at) = dbg_loc {
+                    bcx.with_block(|bcx| {
+                        declare_local(bcx, decl.name, ty, scope,
+                                    VariableAccess::DirectVariable { alloca: lvalue.llval },
+                                    VariableKind::LocalVariable, span, inlined_at);
+                    });
+                } else {
+                    panic!("Unexpected");
+                }
             }
             LocalRef::Lvalue(lvalue)
         });
@@ -253,36 +283,14 @@ pub fn trans_mir<'blk, 'tcx: 'blk>(fcx: &'blk FunctionContext<'blk, 'tcx>) {
         })).collect()
     };
 
-    // Allocate a `Block` for every basic block
-    let block_bcxs: IndexVec<mir::BasicBlock, Block<'blk,'tcx>> =
-        mir.basic_blocks().indices().map(|bb| {
-            if bb == mir::START_BLOCK {
-                fcx.new_block("start", None)
-            } else {
-                fcx.new_block(&format!("{:?}", bb), None)
-            }
-        }).collect();
-
     // Branch to the START block
-    let start_bcx = block_bcxs[mir::START_BLOCK];
+    let start_bcx = mircx.blocks[mir::START_BLOCK];
     bcx.br(start_bcx.llbb);
 
     // Up until here, IR instructions for this function have explicitly not been annotated with
     // source code location, so we don't step into call setup code. From here on, source location
     // emitting should be enabled.
     debuginfo::start_emitting_source_locations(fcx);
-
-    let mut mircx = MirContext {
-        mir: mir.clone(),
-        fcx: fcx,
-        llpersonalityslot: None,
-        blocks: block_bcxs,
-        unreachable_block: None,
-        cleanup_kinds: cleanup_kinds,
-        landing_pads: IndexVec::from_elem(None, mir.basic_blocks()),
-        locals: locals,
-        scopes: scopes,
-    };
 
     let mut visited = BitVector::new(mir.basic_blocks().len());
 
@@ -387,7 +395,8 @@ fn arg_local_refs<'bcx, 'tcx>(bcx: &BlockAndBuilder<'bcx, 'tcx>,
                     declare_local(bcx, keywords::Invalid.name(),
                                   tupled_arg_ty, scope, variable_access,
                                   VariableKind::ArgumentVariable(arg_index + i + 1),
-                                  bcx.fcx().span.unwrap_or(DUMMY_SP));
+                                  bcx.fcx().span.unwrap_or(DUMMY_SP),
+                                  None);
                 }));
             }
             return LocalRef::Lvalue(LvalueRef::new_sized(lltemp, LvalueTy::from_ty(arg_ty)));
@@ -461,7 +470,8 @@ fn arg_local_refs<'bcx, 'tcx>(bcx: &BlockAndBuilder<'bcx, 'tcx>,
                 declare_local(bcx, arg_decl.debug_name, arg_ty, scope,
                               VariableAccess::DirectVariable { alloca: llval },
                               VariableKind::ArgumentVariable(arg_index + 1),
-                              bcx.fcx().span.unwrap_or(DUMMY_SP));
+                              bcx.fcx().span.unwrap_or(DUMMY_SP),
+                              None);
                 return;
             }
 
@@ -526,7 +536,8 @@ fn arg_local_refs<'bcx, 'tcx>(bcx: &BlockAndBuilder<'bcx, 'tcx>,
                 };
                 declare_local(bcx, decl.debug_name, ty, scope, variable_access,
                               VariableKind::CapturedVariable,
-                              bcx.fcx().span.unwrap_or(DUMMY_SP));
+                              bcx.fcx().span.unwrap_or(DUMMY_SP),
+                              None);
             }
         }));
         LocalRef::Lvalue(LvalueRef::new_sized(llval, LvalueTy::from_ty(arg_ty)))

@@ -474,7 +474,8 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                                  scope_metadata: DIScope,
                                  variable_access: VariableAccess,
                                  variable_kind: VariableKind,
-                                 span: Span) {
+                                 span: Span,
+                                 inlined_at: Option<(DIScope, Span)>) {
     let cx: &CrateContext = bcx.ccx();
 
     let file = span_start(cx, span).file;
@@ -510,7 +511,9 @@ pub fn declare_local<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                     argument_index)
             };
             source_loc::set_debug_location(cx, None,
-                InternalDebugLocation::KnownLocation(scope_metadata, span.lo, None));
+                InternalDebugLocation::KnownLocation(
+                    scope_metadata, span.lo,
+                    inlined_at.map(|i| (i.0, i.1.lo) )));
             unsafe {
                 let debug_loc = llvm::LLVMGetCurrentDebugLocation(cx.raw_builder());
                 let instr = llvm::LLVMRustDIBuilderInsertDeclareAtEnd(

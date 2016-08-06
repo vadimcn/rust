@@ -1918,7 +1918,8 @@ pub fn create_local_var_metadata(bcx: Block, local: &hir::Local) {
                       scope_metadata,
                       VariableAccess::DirectVariable { alloca: datum.val },
                       VariableKind::LocalVariable,
-                      span);
+                      span,
+                      None);
     })
 }
 
@@ -2004,7 +2005,8 @@ pub fn create_captured_var_metadata<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                   scope_metadata,
                   variable_access,
                   VariableKind::CapturedVariable,
-                  span);
+                  span,
+                  None);
 }
 
 /// Creates debug information for a local variable introduced in the head of a
@@ -2049,7 +2051,8 @@ pub fn create_match_binding_metadata<'blk, 'tcx>(bcx: Block<'blk, 'tcx>,
                   scope_metadata,
                   var_access,
                   VariableKind::LocalVariable,
-                  binding.span);
+                  binding.span,
+                  None);
 }
 
 /// Creates debug information for the given function argument.
@@ -2101,7 +2104,8 @@ pub fn create_argument_metadata(bcx: Block, arg: &hir::Arg) {
                       scope_metadata,
                       VariableAccess::DirectVariable { alloca: datum.val },
                       VariableKind::ArgumentVariable(argument_index),
-                      span);
+                      span,
+                      None);
     })
 }
 
