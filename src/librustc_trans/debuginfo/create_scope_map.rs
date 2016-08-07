@@ -10,7 +10,7 @@
 
 use super::FunctionDebugContext;
 use super::metadata::file_metadata;
-use super::utils::{DIB, span_start};
+use super::utils::{DIB, span_start, create_DIArray};
 
 use llvm;
 use llvm::debuginfo::{DIScope, DISubprogram};
@@ -19,17 +19,15 @@ use rustc::hir::pat_util;
 use rustc::mir::repr::{Mir, VisibilityScope};
 use rustc::util::nodemap::NodeMap;
 
-use libc::c_uint;
+use libc::{c_uint, c_char};
 use std::ptr;
 
-use syntax_pos::{Span, Pos};
+use syntax_pos::{Span, Pos, BytePos, NO_EXPANSION};
 use syntax::{ast, codemap};
 
 use rustc_data_structures::bitvec::BitVector;
 use rustc_data_structures::indexed_vec::{Idx, IndexVec};
 use rustc::hir::{self, PatKind};
-
-use syntax_pos::BytePos;
 
 // This procedure builds the *scope map* for a given function, which maps any
 // given ast::NodeId in the function's AST to the correct DIScope metadata instance.
@@ -128,9 +126,9 @@ fn make_mir_scope(ccx: &CrateContext,
     }
 
     let scope_data = &mir.visibility_scopes[scope];
-    let parent_scope = if let Some(parent) = scope_data.parent_scope {
+    let (parent_scope, parent_scope_data) = if let Some(parent) = scope_data.parent_scope {
         make_mir_scope(ccx, mir, has_variables, fn_metadata, parent, scopes);
-        scopes[parent]
+        (scopes[parent], &mir.visibility_scopes[parent])
     } else {
         // The root is the function itself.
         let loc = span_start(ccx, mir.span);
@@ -155,12 +153,74 @@ fn make_mir_scope(ccx: &CrateContext,
         }
     }
 
+    let parent_scope_metadata = if scope_data.span.expn_id != NO_EXPANSION &&
+                                   parent_scope_data.span.expn_id == NO_EXPANSION {
+        use rustc::ty;
+        use abi::{Abi, FnType};
+        use std::ffi::CString;
+
+        let cm = ccx.sess().codemap();
+        let macro_name = match cm.source_callee(scope_data.span) {
+            Some(n) => CString::new(&n.name().as_str() as &str).unwrap(),
+            None => CString::new("<macro>").unwrap(),
+        };
+        let loc = cm.lookup_char_pos(scope_data.span.lo);
+        let file_metadata = file_metadata(ccx, &loc.file.name, &loc.file.abs_path);
+
+        let sig = ty::FnSig {
+            inputs: vec![],
+            output: ty::FnConverging(ccx.tcx().mk_nil()),
+            variadic: false,
+        };
+        let fty = FnType::new(ccx, Abi::Rust, &sig, &[]);
+        unsafe {
+            let llfn = llvm::LLVMAddFunction(ccx.llmod(),
+                                             macro_name.as_ptr() as *const c_char,
+                                             fty.llvm_type(ccx).to_ref());
+            let llbb = llvm::LLVMAppendBasicBlockInContext(ccx.llcx(), llfn, "return\0".as_ptr() as *const c_char);
+            let llbuilder = llvm::LLVMCreateBuilderInContext(ccx.llcx());
+            llvm::LLVMPositionBuilderAtEnd(llbuilder, llbb);
+            llvm::LLVMBuildRetVoid(llbuilder);
+            llvm::LLVMDisposeBuilder(llbuilder);
+
+            let function_type_metadata = llvm::LLVMRustDIBuilderCreateSubroutineType(
+                DIB(ccx), file_metadata, create_DIArray(DIB(ccx), &[]));
+            let template_parameters = create_DIArray(DIB(ccx), &[]);
+            let fn_metadata = llvm::LLVMRustDIBuilderCreateFunction(
+                DIB(ccx),
+                file_metadata,
+                macro_name.as_ptr() as *const c_char,
+                macro_name.as_ptr() as *const c_char,
+                file_metadata,
+                loc.line as c_uint,
+                function_type_metadata,
+                true, // local
+                true, // is definition
+                loc.line as c_uint,
+                llvm::debuginfo::FlagPrototyped as c_uint,
+                false, // optimized
+                llfn,
+                template_parameters,
+                ptr::null_mut());
+            fn_metadata
+
+            // llvm::LLVMRustDIBuilderCreateLexicalBlock(
+            //     DIB(ccx),
+            //     fn_metadata,
+            //     file_metadata,
+            //     loc.line as c_uint,
+            //     loc.col.to_usize() as c_uint)
+        }
+    } else {
+        parent_scope.scope_metadata
+    };
+
     let loc = span_start(ccx, scope_data.span);
     let file_metadata = file_metadata(ccx, &loc.file.name, &loc.file.abs_path);
     let scope_metadata = unsafe {
         llvm::LLVMRustDIBuilderCreateLexicalBlock(
             DIB(ccx),
-            parent_scope.scope_metadata,
+            parent_scope_metadata,
             file_metadata,
             loc.line as c_uint,
             loc.col.to_usize() as c_uint)
