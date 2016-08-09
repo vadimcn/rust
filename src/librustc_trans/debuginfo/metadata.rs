@@ -23,7 +23,8 @@ use context::SharedCrateContext;
 use session::Session;
 
 use llvm::{self, ValueRef};
-use llvm::debuginfo::{DIType, DIFile, DIScope, DIDescriptor, DICompositeType, DILexicalBlock};
+use llvm::debuginfo::{DIType, DIFile, DIScope, DIDescriptor, DICompositeType, DILexicalBlock,
+                      DISubprogram};
 
 use rustc::hir::def_id::DefId;
 use rustc::hir::pat_util;
@@ -2120,5 +2121,55 @@ pub fn extend_scope_to_file(ccx: &CrateContext,
             DIB(ccx),
             scope_metadata,
             file_metadata)
+    }
+}
+
+pub fn get_macro_fn_metadata(ccx: &CrateContext,
+                             macro_info: NameAndSpan) -> DISubprogram {
+    use rustc::ty;
+    use abi::{Abi, FnType};
+    use std::ffi::CString;
+    use libc::c_char;
+
+    let cm = ccx.sess().codemap();
+    let macro_span = macro_info.span.unwrap();
+    let loc = cm.lookup_char_pos(macro_span.lo);
+    let file_metadata = file_metadata(ccx, &loc.file.name, &loc.file.abs_path);
+
+    let sig = ty::FnSig {
+        inputs: vec![],
+        output: ty::FnConverging(ccx.tcx().mk_nil()),
+        variadic: false,
+    };
+    let fty = FnType::new(ccx, Abi::Rust, &sig, &[]);
+    unsafe {
+        let llfn = llvm::LLVMAddFunction(ccx.llmod(),
+                                            macro_name.as_ptr() as *const c_char,
+                                            fty.llvm_type(ccx).to_ref());
+        let llbb = llvm::LLVMAppendBasicBlockInContext(ccx.llcx(), llfn, "return\0".as_ptr() as *const c_char);
+        let llbuilder = llvm::LLVMCreateBuilderInContext(ccx.llcx());
+        llvm::LLVMPositionBuilderAtEnd(llbuilder, llbb);
+        llvm::LLVMBuildRetVoid(llbuilder);
+        llvm::LLVMDisposeBuilder(llbuilder);
+
+        let function_type_metadata = llvm::LLVMRustDIBuilderCreateSubroutineType(
+            DIB(ccx), file_metadata, create_DIArray(DIB(ccx), &[]));
+        let fn_metadata = llvm::LLVMRustDIBuilderCreateFunction(
+            DIB(ccx),
+            file_metadata,
+            macro_name.as_ptr() as *const c_char,
+            macro_name.as_ptr() as *const c_char,
+            file_metadata,
+            loc.line as c_uint,
+            function_type_metadata,
+            true, // local
+            true, // is definition
+            loc.line as c_uint,
+            llvm::debuginfo::FlagPrototyped as c_uint,
+            false, // optimized
+            llfn,
+            ptr::null_mut(),
+            ptr::null_mut());
+        fn_metadata
     }
 }

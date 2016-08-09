@@ -85,6 +85,8 @@ pub struct CrateDebugContext<'tcx> {
     // This collection is used to assert that composite types (structs, enums,
     // ...) have their members only set once:
     composite_types_completed: RefCell<FnvHashSet<DIType>>,
+
+    macro_fns: RefCell<FnvHashMap<Name, DISubprogram>>,
 }
 
 impl<'tcx> CrateDebugContext<'tcx> {
@@ -102,6 +104,7 @@ impl<'tcx> CrateDebugContext<'tcx> {
             type_map: RefCell::new(TypeMap::new()),
             namespace_map: RefCell::new(DefIdMap()),
             composite_types_completed: RefCell::new(FnvHashSet()),
+            macro_fns: RefCell::new(FnvHashSet()),
         };
     }
 }
