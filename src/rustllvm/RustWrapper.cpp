@@ -451,6 +451,13 @@ extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateBasicType(
         AlignInBits, Encoding));
 }
 
+extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateQualifiedType(
+    LLVMRustDIBuilderRef Builder,
+    unsigned Tag,
+    LLVMRustMetadataRef FromTy) {
+    return wrap(Builder->createQualifiedType(Tag, unwrapDI<DIType>(FromTy)));
+}
+
 extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreatePointerType(
     LLVMRustDIBuilderRef Builder,
     LLVMRustMetadataRef PointeeTy,
@@ -459,6 +466,16 @@ extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreatePointerType(
     const char* Name) {
     return wrap(Builder->createPointerType(
         unwrapDI<DIType>(PointeeTy), SizeInBits, AlignInBits, Name));
+}
+
+extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateReferenceType(
+    LLVMRustDIBuilderRef Builder,
+    unsigned Tag,
+    LLVMRustMetadataRef PointeeTy,
+    uint64_t SizeInBits,
+    uint64_t AlignInBits) {
+    return wrap(Builder->createReferenceType(
+        Tag, unwrapDI<DIType>(PointeeTy), SizeInBits, AlignInBits));
 }
 
 extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateStructType(
@@ -1302,7 +1319,7 @@ static LLVMLinkage from_rust(LLVMRustLinkage linkage) {
             return LLVMCommonLinkage;
         default:
             llvm_unreachable("Invalid LLVMRustLinkage value!");
-    } 
+    }
 }
 
 extern "C" LLVMRustLinkage LLVMRustGetLinkage(LLVMValueRef V) {

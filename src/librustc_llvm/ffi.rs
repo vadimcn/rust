@@ -1750,12 +1750,24 @@ extern {
                                             Encoding: c_uint)
                                             -> DIBasicType;
 
+    pub fn LLVMRustDIBuilderCreateQualifiedType(Builder: DIBuilderRef,
+                                                Tag: c_uint,
+                                                FromTy: DIType)
+                                                -> DIDerivedType;
+
     pub fn LLVMRustDIBuilderCreatePointerType(Builder: DIBuilderRef,
                                           PointeeTy: DIType,
                                           SizeInBits: u64,
                                           AlignInBits: u64,
                                           Name: *const c_char)
                                           -> DIDerivedType;
+
+    pub fn LLVMRustDIBuilderCreateReferenceType(Builder: DIBuilderRef,
+                                           Tag: c_uint,
+                                           PointeeTy: DIType,
+                                           SizeInBits: u64,
+                                           AlignInBits: u64)
+                                           -> DIDerivedType;
 
     pub fn LLVMRustDIBuilderCreateStructType(Builder: DIBuilderRef,
                                              Scope: DIDescriptor,

@@ -58,6 +58,10 @@ const DW_ATE_signed: c_uint = 0x05;
 const DW_ATE_unsigned: c_uint = 0x07;
 #[allow(non_upper_case_globals)]
 const DW_ATE_unsigned_char: c_uint = 0x08;
+#[allow(non_upper_case_globals)]
+const DW_TAG_reference_type: c_uint = 0x10;
+#[allow(non_upper_case_globals)]
+const DW_TAG_const_type: c_uint = 0x26;
 
 pub const UNKNOWN_LINE_NUMBER: c_uint = 0;
 pub const UNKNOWN_COLUMN_NUMBER: c_uint = 0;
@@ -727,16 +731,27 @@ pub fn type_metadata<'a, 'tcx>(cx: &CrateContext<'a, 'tcx>,
                 }
                 _ => {
                     let pointee_metadata = type_metadata(cx, ty, usage_site_span);
-
                     match debug_context(cx).type_map
                                            .borrow()
                                            .find_metadata_for_unique_id(unique_type_id) {
                         Some(metadata) => return metadata,
                         None => { /* proceed normally */ }
                     };
-
-                    MetadataCreationResult::new(pointer_type_metadata(cx, t, pointee_metadata),
-                                                false)
+                    // mark pointee as const if immutable
+                    let pointee_metadata = match *sty {
+                        ty::TyRawPtr(ty::TypeAndMut{mutbl: hir::MutImmutable, ..}) |
+                        ty::TyRef(_, ty::TypeAndMut{mutbl: hir::MutImmutable, ..}) =>
+                            unsafe {
+                                llvm::LLVMRustDIBuilderCreateQualifiedType(
+                                    DIB(cx), DW_TAG_const_type, pointee_metadata)
+                            },
+                        _ => pointee_metadata,
+                    };
+                    let type_metadata = match *sty {
+                        ty::TyRef(..) => reference_type_metadata(cx, t, pointee_metadata),
+                        _ => pointer_type_metadata(cx, t, pointee_metadata),
+                    };
+                    MetadataCreationResult::new(type_metadata, false)
                 }
             }
         }
@@ -939,6 +954,23 @@ fn pointer_type_metadata<'a, 'tcx>(cx: &CrateContext<'a, 'tcx>,
             name.as_ptr())
     };
     return ptr_metadata;
+}
+
+fn reference_type_metadata<'a, 'tcx>(cx: &CrateContext<'a, 'tcx>,
+                                     reference_type: Ty<'tcx>,
+                                     pointee_type_metadata: DIType)
+                                     -> DIType {
+    let ref_llvm_type = type_of::type_of(cx, reference_type);
+    let (pointer_size, pointer_align) = size_and_align_of(cx, ref_llvm_type);
+    let ref_metadata = unsafe {
+        llvm::LLVMRustDIBuilderCreateReferenceType(
+            DIB(cx),
+            DW_TAG_reference_type,
+            pointee_type_metadata,
+            bytes_to_bits(pointer_size),
+            bytes_to_bits(pointer_align))
+    };
+    return ref_metadata;
 }
 
 pub fn compile_unit_metadata(scc: &SharedCrateContext,
