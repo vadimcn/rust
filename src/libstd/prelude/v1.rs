@@ -51,3 +51,5 @@
 #[doc(no_inline)] pub use string::{String, ToString};
 #[stable(feature = "rust1", since = "1.0.0")]
 #[doc(no_inline)] pub use vec::Vec;
+#[unstable(feature = "coroutines", issue = "0")]
+#[doc(no_inline)] pub use coroutine::CoResult::{self, Yield, Return};

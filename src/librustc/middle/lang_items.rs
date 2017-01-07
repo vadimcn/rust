@@ -347,6 +347,8 @@ language_item_table! {
 
     PhantomDataItem,                 "phantom_data",            phantom_data;
 
+    CoResultLangItem,                "coresult",                coresult;
+
     // Deprecated:
     CovariantTypeItem,               "covariant_type",          covariant_type;
     ContravariantTypeItem,           "contravariant_type",      contravariant_type;

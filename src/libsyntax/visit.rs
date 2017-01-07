@@ -770,6 +770,9 @@ pub fn walk_expr<'a, V: Visitor<'a>>(visitor: &mut V, expression: &'a Expr) {
         ExprKind::Ret(ref optional_expression) => {
             walk_list!(visitor, visit_expr, optional_expression);
         }
+        ExprKind::Yield(ref optional_expression) => {
+            walk_list!(visitor, visit_expr, optional_expression);
+        }
         ExprKind::Mac(ref mac) => visitor.visit_mac(mac),
         ExprKind::Paren(ref subexpression) => {
             visitor.visit_expr(subexpression)

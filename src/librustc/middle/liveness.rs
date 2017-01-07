@@ -494,7 +494,7 @@ fn visit_expr<'a, 'tcx>(ir: &mut IrMaps<'a, 'tcx>, expr: &'tcx Expr) {
       hir::ExprArray(..) | hir::ExprCall(..) | hir::ExprMethodCall(..) |
       hir::ExprTup(..) | hir::ExprBinary(..) | hir::ExprAddrOf(..) |
       hir::ExprCast(..) | hir::ExprUnary(..) | hir::ExprBreak(..) |
-      hir::ExprAgain(_) | hir::ExprLit(_) | hir::ExprRet(..) |
+      hir::ExprAgain(_) | hir::ExprLit(_) | hir::ExprRet(..) | hir::ExprYield(..) |
       hir::ExprBlock(..) | hir::ExprAssign(..) | hir::ExprAssignOp(..) |
       hir::ExprStruct(..) | hir::ExprRepeat(..) |
       hir::ExprInlineAsm(..) | hir::ExprBox(..) |
@@ -1029,6 +1029,11 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
             self.propagate_through_opt_expr(o_e.as_ref().map(|e| &**e), exit_ln)
           }
 
+          hir::ExprYield(ref o_e) => {
+            // Treat yield as a function call
+            self.propagate_through_opt_expr(o_e.as_ref().map(|e| &**e), succ)
+          }
+
           hir::ExprBreak(opt_label, ref opt_expr) => {
               // Find which label this break jumps to
               let sc = self.find_loop_scope(opt_label, expr.span);
@@ -1417,7 +1422,7 @@ fn check_expr<'a, 'tcx>(this: &mut Liveness<'a, 'tcx>, expr: &'tcx Expr) {
       hir::ExprMatch(..) | hir::ExprWhile(..) | hir::ExprLoop(..) |
       hir::ExprIndex(..) | hir::ExprField(..) | hir::ExprTupField(..) |
       hir::ExprArray(..) | hir::ExprTup(..) | hir::ExprBinary(..) |
-      hir::ExprCast(..) | hir::ExprUnary(..) | hir::ExprRet(..) |
+      hir::ExprCast(..) | hir::ExprUnary(..) | hir::ExprRet(..) | hir::ExprYield(..) |
       hir::ExprBreak(..) | hir::ExprAgain(..) | hir::ExprLit(_) |
       hir::ExprBlock(..) | hir::ExprAddrOf(..) |
       hir::ExprStruct(..) | hir::ExprRepeat(..) |

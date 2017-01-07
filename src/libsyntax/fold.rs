@@ -1246,6 +1246,7 @@ pub fn noop_fold_expr<T: Folder>(Expr {id, node, span, attrs}: Expr, folder: &mu
                        folder.fold_ident(label.node)))
             ),
             ExprKind::Ret(e) => ExprKind::Ret(e.map(|x| folder.fold_expr(x))),
+            ExprKind::Yield(e) => ExprKind::Yield(e.map(|x| folder.fold_expr(x))),
             ExprKind::InlineAsm(asm) => ExprKind::InlineAsm(asm.map(|asm| {
                 InlineAsm {
                     inputs: asm.inputs.move_map(|(c, input)| {

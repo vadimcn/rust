@@ -590,6 +590,7 @@ fn make_mirror_unadjusted<'a, 'gcx, 'tcx>(cx: &mut Cx<'a, 'gcx, 'tcx>,
             }
         }
         hir::ExprRet(ref v) => ExprKind::Return { value: v.to_ref() },
+        hir::ExprYield(ref v) => ExprKind::Return { value: v.to_ref() },
         hir::ExprBreak(label, ref value) => {
             ExprKind::Break {
                 label: label.map(|label| cx.tcx.region_maps.node_extent(label.loop_id)),

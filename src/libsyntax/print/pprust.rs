@@ -2225,6 +2225,16 @@ impl<'a> State<'a> {
                     _ => ()
                 }
             }
+            ast::ExprKind::Yield(ref result) => {
+                try!(word(&mut self.s, "yield"));
+                match *result {
+                    Some(ref expr) => {
+                        try!(word(&mut self.s, " "));
+                        try!(self.print_expr(&expr));
+                    }
+                    _ => ()
+                }
+            }
             ast::ExprKind::InlineAsm(ref a) => {
                 word(&mut self.s, "asm!")?;
                 self.popen()?;

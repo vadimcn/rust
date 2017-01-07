@@ -65,3 +65,6 @@ pub use str::StrExt;
 #[stable(feature = "core_prelude", since = "1.4.0")]
 #[doc(no_inline)]
 pub use char::CharExt;
+#[unstable(feature = "coroutines", issue="0")]
+#[doc(no_inline)]
+pub use coroutine::CoResult::{self, Yield, Return};

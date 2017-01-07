@@ -511,6 +511,12 @@ impl<'a, 'gcx, 'tcx> ExprUseVisitor<'a, 'gcx, 'tcx> {
                 }
             }
 
+            hir::ExprYield(ref opt_expr) => {
+                if let Some(ref expr) = *opt_expr {
+                    self.consume_expr(&expr);
+                }
+            }
+
             hir::ExprAssign(ref lhs, ref rhs) => {
                 self.mutate_expr(expr, &lhs, MutateMode::JustWrite);
                 self.consume_expr(&rhs);

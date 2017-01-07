@@ -250,6 +250,7 @@
 #![feature(const_fn)]
 #![feature(core_float)]
 #![feature(core_intrinsics)]
+#![feature(coroutines)]
 #![feature(dropck_parametricity)]
 #![feature(exact_size_is_empty)]
 #![feature(float_extras)]
@@ -430,6 +431,8 @@ pub use std_unicode::char;
 #[unstable(feature = "i128", issue = "35118")]
 #[cfg(not(stage0))]
 pub use core::u128;
+#[unstable(feature = "coroutines", issue = "0")]
+pub use core::coroutine;
 
 pub mod f32;
 pub mod f64;

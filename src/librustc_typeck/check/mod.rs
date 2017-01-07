@@ -3719,6 +3719,9 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
             }
             tcx.types.never
           }
+          hir::ExprRet(ref expr_opt) => {
+              unimplemented!();
+          }
           hir::ExprAssign(ref lhs, ref rhs) => {
             let lhs_ty = self.check_expr_with_lvalue_pref(&lhs, PreferMutLvalue);
 

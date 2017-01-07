@@ -963,6 +963,8 @@ pub enum ExprKind {
     Continue(Option<SpannedIdent>),
     /// A `return`, with an optional value to be returned
     Ret(Option<P<Expr>>),
+    /// A 'yield', with an optional value to be yielded
+    Yield(Option<P<Expr>>),
 
     /// Output of the `asm!()` macro
     InlineAsm(P<InlineAsm>),

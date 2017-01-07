@@ -238,7 +238,8 @@ impl<'a, 'gcx, 'tcx> Builder<'a, 'gcx, 'tcx> {
             ExprKind::AssignOp { .. } |
             ExprKind::Continue { .. } |
             ExprKind::Break { .. } |
-            ExprKind::Return {.. } => {
+            ExprKind::Return { .. } |
+            ExprKind::Yield { .. } => {
                 this.stmt_expr(block, expr)
             }
 

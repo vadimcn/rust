@@ -272,7 +272,7 @@ impl Token {
     pub fn is_strict_keyword(&self) -> bool {
         match *self {
             Ident(id) => id.name >= keywords::As.name() &&
-                         id.name <= keywords::While.name(),
+                         id.name <= keywords::Yield.name(),
             _ => false,
         }
     }
@@ -281,7 +281,7 @@ impl Token {
     pub fn is_reserved_keyword(&self) -> bool {
         match *self {
             Ident(id) => id.name >= keywords::Abstract.name() &&
-                         id.name <= keywords::Yield.name(),
+                         id.name <= keywords::Virtual.name(),
             _ => false,
         }
     }

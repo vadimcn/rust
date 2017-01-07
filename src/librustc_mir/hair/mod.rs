@@ -210,6 +210,9 @@ pub enum ExprKind<'tcx> {
     Return {
         value: Option<ExprRef<'tcx>>,
     },
+    Yield {
+        value: Option<ExprRef<'tcx>>,
+    },
     Repeat {
         value: ExprRef<'tcx>,
         count: TypedConstVal<'tcx>,

@@ -1376,6 +1376,16 @@ impl<'a> State<'a> {
                     _ => (),
                 }
             }
+            hir::ExprYield(ref result) => {
+                word(&mut self.s, "yield")?;
+                match *result {
+                    Some(ref expr) => {
+                        word(&mut self.s, " ")?;
+                        self.print_expr(&expr)?;
+                    }
+                    _ => (),
+                }
+            }
             hir::ExprInlineAsm(ref a, ref outputs, ref inputs) => {
                 word(&mut self.s, "asm!")?;
                 self.popen()?;

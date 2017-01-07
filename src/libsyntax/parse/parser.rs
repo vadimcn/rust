@@ -2241,6 +2241,14 @@ impl<'a> Parser<'a> {
                     } else {
                         ex = ExprKind::Ret(None);
                     }
+                } else if self.eat_keyword(keywords::Yield) {
+                    if self.token.can_begin_expr() {
+                        let e = self.parse_expr()?;
+                        hi = e.span.hi;
+                        ex = ExprKind::Yield(Some(e));
+                    } else {
+                        ex = ExprKind::Yield(None);
+                    }
                 } else if self.eat_keyword(keywords::Break) {
                     let lt = if self.token.is_lifetime() {
                         let spanned_lt = Spanned {
