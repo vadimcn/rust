@@ -633,13 +633,13 @@ impl<'a, 'gcx, 'tcx> ParamTy {
 /// particular, imagine a type like this:
 ///
 ///     for<'a> fn(for<'b> fn(&'b isize, &'a isize), &'a char)
-///     ^          ^            |        |         |
-///     |          |            |        |         |
-///     |          +------------+ 1      |         |
-///     |                                |         |
-///     +--------------------------------+ 2       |
-///     |                                          |
-///     +------------------------------------------+ 1
+///     ^          ^            |          |           |
+///     |          |            |          |           |
+///     |          +------------+ 1        |           |
+///     |                                  |           |
+///     +----------------------------------+ 2         |
+///     |                                              |
+///     +----------------------------------------------+ 1
 ///
 /// In this type, there are two binders (the outer fn and the inner
 /// fn). We need to be able to determine, for any given region, which

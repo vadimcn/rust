@@ -13,12 +13,14 @@
 //! Coroutine result
 
 /// A type that represents the return type of a coroutine
+#[cfg(not(stage0))]
 #[unstable(feature = "coroutines", issue="0")]
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
-#[cfg_attr(not(stage0), lang="coresult")]
+//#[cfg_attr(not(stage0), lang="coresult")]
 pub enum CoResult<Y,R> {
   /// Coroutine executed "yield"
   Yield(Y),
-  /// Execution reached end of the coroutine
+  /// Execution has reached the end of the coroutine
   Return(R)
 }
+

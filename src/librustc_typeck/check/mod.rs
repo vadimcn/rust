@@ -3719,7 +3719,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
             }
             tcx.types.never
           }
-          hir::ExprRet(ref expr_opt) => {
+          hir::ExprYield(ref _expr_opt) => {
               unimplemented!();
           }
           hir::ExprAssign(ref lhs, ref rhs) => {

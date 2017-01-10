@@ -280,7 +280,7 @@ impl<'a, 'tcx> CFGBuilder<'a, 'tcx> {
                 self.add_unreachable_node()
             }
 
-            hir::ExprYield(ref v) => {
+            hir::ExprYield(ref _v) => {
                 unimplemented!()
             }
 
