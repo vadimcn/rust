@@ -38,11 +38,16 @@ extern crate macro_stepping; // exports new_scope!()
 // gdb-command:frame
 // gdb-check:[...]#loc4[...]
 // gdb-command:next
+// gdb-command:step
 // gdb-command:frame
 // gdb-check:[...]#loc5[...]
 // gdb-command:next
+// gdb-command:next
 // gdb-command:frame
 // gdb-check:[...]#loc6[...]
+// gdb-command:next
+// gdb-command:frame
+// gdb-check:[...]#loc7[...]
 
 // === LLDB TESTS ==================================================================================
 
@@ -65,8 +70,13 @@ extern crate macro_stepping; // exports new_scope!()
 // lldb-command:frame select
 // lldb-check:[...]#loc4[...]
 // lldb-command:next
+// lldb-command:step
 // lldb-command:frame select
 // lldb-check:[...]#loc5[...]
+// lldb-command:next
+// lldb-command:next
+// lldb-command:frame select
+// lldb-check:[...]#loc6[...]
 
 macro_rules! foo {
     () => {
@@ -95,10 +105,14 @@ fn main() {
 
     new_scope!(); // #loc4
 
-    println!("Hello {}", // #loc5
+    included();
+
+    println!("Hello {}", // #loc6
              "world");
 
-    zzz(); // #loc6
+    zzz(); // #loc7
 }
 
 fn zzz() {()}
+
+include!("macro-stepping.inc");

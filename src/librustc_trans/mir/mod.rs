@@ -29,6 +29,7 @@ use type_of;
 use syntax_pos::{DUMMY_SP, NO_EXPANSION, COMMAND_LINE_EXPN, BytePos, Span};
 use syntax::symbol::keywords;
 use syntax::abi::Abi;
+use syntax::codemap::ExpnFormat;
 
 use std::iter;
 
@@ -136,8 +137,17 @@ impl<'a, 'tcx> MirContext<'a, 'tcx> {
             // Walk up the macro expansion chain until we reach a non-expanded span.
             let mut span = source_info.span;
             while span.expn_id != NO_EXPANSION && span.expn_id != COMMAND_LINE_EXPN {
-                if let Some(callsite_span) = cm.with_expn_info(span.expn_id,
-                                                    |ei| ei.map(|ei| ei.call_site.clone())) {
+                let callsite_span = cm.with_expn_info(span.expn_id, |ei| ei.map_or(None, |ei| {
+                    match ei.callee.format {
+                        // Stop if this is an expansion of the include!() macro:
+                        // include!() is typically used to insert large swaths of code containing
+                        // complete functions, so keeping original line info is preferrable.
+                        ExpnFormat::MacroBang(name) if &*name.as_str() == "include" => None,
+                        _ => Some(ei.call_site.clone()),
+                    }
+                }));
+
+                if let Some(callsite_span) = callsite_span {
                     span = callsite_span;
                 } else {
                     break;
