@@ -163,37 +163,52 @@ extern "C" void LLVMRustAddCallSiteAttribute(LLVMValueRef Instr, unsigned Index,
                                              LLVMRustAttribute RustAttr) {
   CallSite Call = CallSite(unwrap<Instruction>(Instr));
   Attribute Attr = Attribute::get(Call->getContext(), fromRust(RustAttr));
+  #if 1
+  Call.addAttribute(Index, Attr);
+  #else
   AttrBuilder B(Attr);
   Call.setAttributes(Call.getAttributes().addAttributes(
       Call->getContext(), Index,
       AttributeSet::get(Call->getContext(), Index, B)));
+  #endif
 }
 
 extern "C" void LLVMRustAddDereferenceableCallSiteAttr(LLVMValueRef Instr,
                                                        unsigned Index,
                                                        uint64_t Bytes) {
   CallSite Call = CallSite(unwrap<Instruction>(Instr));
-  AttrBuilder B;
-  B.addDereferenceableAttr(Bytes);
+  #if 1
+  Call.setAttributes(
+      Call.getAttributes().addDereferenceableAttr(Call->getContext(), Index, Bytes));
+  #else
   Call.setAttributes(Call.getAttributes().addAttributes(
       Call->getContext(), Index,
       AttributeSet::get(Call->getContext(), Index, B)));
+  #endif
 }
 
 extern "C" void LLVMRustAddFunctionAttribute(LLVMValueRef Fn, unsigned Index,
                                              LLVMRustAttribute RustAttr) {
   Function *A = unwrap<Function>(Fn);
   Attribute Attr = Attribute::get(A->getContext(), fromRust(RustAttr));
+  #if 1
+  A->addAttribute(Index, Attr);
+  #else
   AttrBuilder B(Attr);
   A->addAttributes(Index, AttributeSet::get(A->getContext(), Index, B));
+  #endif
 }
 
 extern "C" void LLVMRustAddDereferenceableAttr(LLVMValueRef Fn, unsigned Index,
                                                uint64_t Bytes) {
   Function *A = unwrap<Function>(Fn);
+  #if 1
+  A->addDereferenceableAttr(Index, Bytes);
+  #else
   AttrBuilder B;
   B.addDereferenceableAttr(Bytes);
   A->addAttributes(Index, AttributeSet::get(A->getContext(), Index, B));
+  #endif
 }
 
 extern "C" void LLVMRustAddFunctionAttrStringValue(LLVMValueRef Fn,
@@ -203,19 +218,29 @@ extern "C" void LLVMRustAddFunctionAttrStringValue(LLVMValueRef Fn,
   Function *F = unwrap<Function>(Fn);
   AttrBuilder B;
   B.addAttribute(Name, Value);
+  #if 1
+  F->setAttributes(
+      F->getAttributes().addAttributes(F->getContext(), Index, B));
+  #else
   F->addAttributes(Index, AttributeSet::get(F->getContext(), Index, B));
+  #endif
 }
 
 extern "C" void LLVMRustRemoveFunctionAttributes(LLVMValueRef Fn,
                                                  unsigned Index,
                                                  LLVMRustAttribute RustAttr) {
   Function *F = unwrap<Function>(Fn);
-  const AttributeSet PAL = F->getAttributes();
   Attribute Attr = Attribute::get(F->getContext(), fromRust(RustAttr));
   AttrBuilder B(Attr);
+  #if 1
+  F->setAttributes(
+      F->getAttributes().removeAttributes(F->getContext(), Index, B));
+  #else
+  const AttributeSet PAL = F->getAttributes();
   const AttributeSet PALNew = PAL.removeAttributes(
       F->getContext(), Index, AttributeSet::get(F->getContext(), Index, B));
   F->setAttributes(PALNew);
+  #endif
 }
 
 // enable fpmath flag UnsafeAlgebra
@@ -318,6 +343,11 @@ extern "C" void LLVMRustAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm) 
 
 typedef DIBuilder *LLVMRustDIBuilderRef;
 
+#if 1
+
+typedef LLVMMetadataRef LLVMRustMetadataRef;
+
+#else
 typedef struct LLVMOpaqueMetadata *LLVMRustMetadataRef;
 
 namespace llvm {
@@ -327,6 +357,7 @@ inline Metadata **unwrap(LLVMRustMetadataRef *Vals) {
   return reinterpret_cast<Metadata **>(Vals);
 }
 }
+#endif
 
 template <typename DIT> DIT *unwrapDIPtr(LLVMRustMetadataRef Ref) {
   return (DIT *)(Ref ? unwrap<MDNode>(Ref) : nullptr);
@@ -555,7 +586,11 @@ extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreatePointerType(
     LLVMRustDIBuilderRef Builder, LLVMRustMetadataRef PointeeTy,
     uint64_t SizeInBits, uint32_t AlignInBits, const char *Name) {
   return wrap(Builder->createPointerType(unwrapDI<DIType>(PointeeTy),
-                                         SizeInBits, AlignInBits, Name));
+                                         SizeInBits, AlignInBits,
+#if 1
+                                         None,
+#endif
+                                         Name));
 }
 
 extern "C" LLVMRustMetadataRef LLVMRustDIBuilderCreateStructType(
@@ -888,7 +923,7 @@ extern "C" void LLVMRustUnpackOptimizationDiagnostic(
   RawRustStringOstream PassNameOS(PassNameOut);
   PassNameOS << Opt->getPassName();
   *FunctionOut = wrap(&Opt->getFunction());
-  *DebugLocOut = wrap(&Opt->getDebugLoc());
+  //*DebugLocOut = wrap(&Opt->getDebugLoc()); !!!!!!!!!!!!!!!!!!!!!!!!!
   RawRustStringOstream MessageOS(MessageOut);
   MessageOS << Opt->getMsg();
 }
