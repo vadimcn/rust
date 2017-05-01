@@ -376,6 +376,11 @@ extern "C" LLVMTargetMachineRef LLVMRustCreateTargetMachine(
   Options.DataSections = DataSections;
   Options.FunctionSections = FunctionSections;
 
+  StringRef triple = TripleStr;
+  if (triple.find("wasm") == 0) {
+    Options.ThreadModel = ThreadModel::Single;
+  }
+
   TargetMachine *TM = TheTarget->createTargetMachine(
       Trip.getTriple(), RealCPU, Feature, Options, RM, CM, OptLevel);
   return wrap(TM);
