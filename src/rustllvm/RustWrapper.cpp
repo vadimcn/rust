@@ -778,7 +778,7 @@ LLVMRustDIBuilderCreateNameSpace(LLVMRustDIBuilderRef Builder,
                                  LLVMRustMetadataRef Scope, const char *Name,
                                  LLVMRustMetadataRef File, unsigned LineNo) {
   return wrap(Builder->createNameSpace(
-      unwrapDI<DIDescriptor>(Scope), Name, unwrapDI<DIFile>(File), LineNo
+      unwrapDI<DIDescriptor>(Scope), Name/*, unwrapDI<DIFile>(File), LineNo*/
 #if LLVM_VERSION_GE(4, 0)
       ,
       false // ExportSymbols (only relevant for C++ anonymous namespaces)
