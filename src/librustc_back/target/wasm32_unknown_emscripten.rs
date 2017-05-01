@@ -31,7 +31,7 @@ pub fn target() -> Result<Target, String> {
         exe_suffix: ".js".to_string(),
         linker_is_gnu: true,
         allow_asm: false,
-        obj_is_bitcode: true,
+        obj_is_bitcode: false,
         is_like_emscripten: true,
         max_atomic_width: Some(32),
         post_link_args: post_link_args,
