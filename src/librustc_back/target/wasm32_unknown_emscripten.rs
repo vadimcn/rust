@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use LinkerFlavor;
+use {LinkerFlavor, PanicStrategy};
 use super::{LinkArgs, Target, TargetOptions};
 use super::emscripten_base::{cmd};
 
@@ -36,6 +36,7 @@ pub fn target() -> Result<Target, String> {
         max_atomic_width: Some(32),
         post_link_args: post_link_args,
         target_family: Some("unix".to_string()),
+        panic_strategy: PanicStrategy::Abort,
         .. Default::default()
     };
     Ok(Target {
