@@ -78,6 +78,15 @@ impl<'a, 'tcx> LinkerInfo {
                     hinted_static: false,
                     is_ld: true,
                 }) as Box<Linker>
+            },
+            LinkerFlavor::Wasm => {
+                let mut linker = WasmLinker {
+                    cmd: cmd,
+                    sess: sess,
+                    info: self,
+                };
+                linker.cmd.arg("-flavor").arg("wasm");
+                Box::new(linker) as Box<Linker>
             }
         }
     }
@@ -670,6 +679,108 @@ impl<'a> Linker for EmLinker<'a> {
         arg.push(encoded);
 
         self.cmd.arg(arg);
+    }
+
+    fn subsystem(&mut self, _subsystem: &str) {
+        // noop
+    }
+
+    fn finalize(&mut self) -> Command {
+        let mut cmd = Command::new("");
+        ::std::mem::swap(&mut cmd, &mut self.cmd);
+        cmd
+    }
+}
+
+#[allow(dead_code)]
+pub struct WasmLinker<'a> {
+    cmd: Command,
+    sess: &'a Session,
+    info: &'a LinkerInfo
+}
+
+impl<'a> Linker for WasmLinker<'a> {
+    fn include_path(&mut self, path: &Path) {
+        self.cmd.arg("-L").arg(path);
+    }
+
+    fn link_staticlib(&mut self, lib: &str) {
+        self.cmd.arg("-l").arg(lib);
+    }
+
+    fn output_filename(&mut self, path: &Path) {
+        self.cmd.arg("-o").arg(path);
+    }
+
+    fn add_object(&mut self, path: &Path) {
+        self.cmd.arg(path);
+    }
+
+    fn link_dylib(&mut self, lib: &str) {
+        // Emscripten always links statically
+        self.link_staticlib(lib);
+    }
+
+    fn link_whole_staticlib(&mut self, lib: &str, _search_path: &[PathBuf]) {
+        // not supported?
+        self.link_staticlib(lib);
+    }
+
+    fn link_whole_rlib(&mut self, lib: &Path) {
+        // not supported?
+        self.link_rlib(lib);
+    }
+
+    fn link_rust_dylib(&mut self, lib: &str, _path: &Path) {
+        self.link_dylib(lib);
+    }
+
+    fn link_rlib(&mut self, lib: &Path) {
+        self.add_object(lib);
+    }
+
+    fn position_independent_executable(&mut self) {
+        // noop
+    }
+
+    fn args(&mut self, args: &[String]) {
+        self.cmd.args(args);
+    }
+
+    fn framework_path(&mut self, _path: &Path) {
+        bug!("frameworks are not supported on Wasm")
+    }
+
+    fn link_framework(&mut self, _framework: &str) {
+        bug!("frameworks are not supported on Wasm")
+    }
+
+    fn gc_sections(&mut self, _keep_metadata: bool) {
+        // noop
+    }
+
+    fn optimize(&mut self) {
+        // noop
+    }
+
+    fn debuginfo(&mut self) {
+        // Preserve names or generate source maps depending on debug info
+        match self.sess.opts.debuginfo {
+            DebugInfoLevel::NoDebugInfo => { self.cmd.arg("--strip-debug"); }
+            _ => {}
+        }
+    }
+
+    fn no_default_libraries(&mut self) {
+        // noop
+    }
+
+    fn build_dylib(&mut self, _out_filename: &Path) {
+        bug!("building dynamic library is unsupported on Wasm")
+    }
+
+    fn export_symbols(&mut self, _tmpdir: &Path, _crate_type: CrateType) {
+        // noop
     }
 
     fn subsystem(&mut self, _subsystem: &str) {
