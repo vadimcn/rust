@@ -256,6 +256,7 @@ LLVMRustWriteArchive(char *Dst, size_t NumMembers,
         LLVMRustSetLastError(toString(MOrErr.takeError()).c_str());
         return LLVMRustResult::Failure;
       }
+      MOrErr->MemberName = Member->Name;
       Members.push_back(std::move(*MOrErr));
 #elif LLVM_VERSION_EQ(3, 8)
       Members.push_back(NewArchiveIterator(Member->Filename));
