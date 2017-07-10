@@ -266,6 +266,9 @@ pub struct TargetOptions {
     /// Archive utility to use when managing archives. Defaults to "ar".
     pub ar: String,
 
+    /// Arguments to pass to LLVM (via LLVMRustSetLLVMOptions()).
+    pub llvm_args: Vec<String>,
+
     /// Linker arguments that are unconditionally passed *before* any
     /// user-defined libraries.
     pub pre_link_args: LinkArgs,
@@ -424,6 +427,7 @@ impl Default for TargetOptions {
             is_builtin: false,
             linker: option_env!("CFG_DEFAULT_LINKER").unwrap_or("cc").to_string(),
             ar: option_env!("CFG_DEFAULT_AR").unwrap_or("ar").to_string(),
+            llvm_args: Vec::new(),
             pre_link_args: LinkArgs::new(),
             post_link_args: LinkArgs::new(),
             asm_args: Vec::new(),

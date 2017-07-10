@@ -24,6 +24,7 @@ pub fn target() -> Result<Target, String> {
         linker: cmd("emcc"),
         ar: cmd("emar"),
 
+        llvm_args: vec!["-thread-model=single".to_string()], // LLVM bug 27124
         dynamic_linking: false,
         executables: true,
         // Today emcc emits two files - a .js file to bootstrap and
@@ -40,7 +41,7 @@ pub fn target() -> Result<Target, String> {
         .. Default::default()
     };
     Ok(Target {
-        llvm_target: "wasm32-unknown-emscripten".to_string(),
+        llvm_target: "wasm32-unknown-unknown-wasm".to_string(),
         target_endian: "little".to_string(),
         target_pointer_width: "32".to_string(),
         target_os: "emscripten".to_string(),
