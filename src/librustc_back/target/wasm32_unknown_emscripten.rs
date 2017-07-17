@@ -22,7 +22,7 @@ pub fn target() -> Result<Target, String> {
         executables: true,
         // Today emcc emits two files - a .js file to bootstrap and
         // possibly interpret the wasm, and a .wasm file
-        exe_suffix: ".js".to_string(),
+        exe_suffix: ".wasm".to_string(),
         linker_is_gnu: true,
         allow_asm: false,
         obj_is_bitcode: false,
