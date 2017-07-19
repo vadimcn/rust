@@ -779,8 +779,22 @@ impl<'a> Linker for WasmLinker<'a> {
         bug!("building dynamic library is unsupported on Wasm")
     }
 
-    fn export_symbols(&mut self, _tmpdir: &Path, _crate_type: CrateType) {
-        // noop
+    fn export_symbols(&mut self, tmpdir: &Path, crate_type: CrateType) {
+        let symbols = &self.info.exports[&crate_type];
+        let path = tmpdir.join("exports.txt");
+        let res = (|| -> io::Result<()> {
+            let mut f = BufWriter::new(File::create(&path)?);
+            for symbol in symbols {
+                writeln!(f, "{}", symbol)?;
+            }
+            Ok(())
+        })();
+        if let Err(e) = res {
+            self.sess.fatal(&format!("failed to write exported symbols: {}", e));
+        }
+        let mut arg = OsString::from("-exports-file=");
+        arg.push(path);
+        self.cmd.arg(arg);
     }
 
     fn subsystem(&mut self, _subsystem: &str) {
