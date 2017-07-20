@@ -655,7 +655,7 @@ pub fn build_session_with_codemap(sopts: config::Options,
                    cstore)
 }
 
-pub fn build_session_(sopts: config::Options,
+pub fn build_session_(mut sopts: config::Options,
                       dep_graph: &DepGraph,
                       local_crate_source_file: Option<PathBuf>,
                       span_diagnostic: errors::Handler,
@@ -669,6 +669,11 @@ pub fn build_session_(sopts: config::Options,
         }
     };
     let target_cfg = config::build_target_config(&sopts, &span_diagnostic);
+
+    if target_cfg.target.arch == "wasm32" && sopts.debuginfo != DebugInfoLevel::NoDebugInfo {
+        span_diagnostic.note_without_error("Current target does not support debug info.");
+        sopts.debuginfo = DebugInfoLevel::NoDebugInfo;
+    }
 
     let p_s = parse::ParseSess::with_span_handler(span_diagnostic, codemap);
     let default_sysroot = match sopts.maybe_sysroot {
