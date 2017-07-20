@@ -776,7 +776,7 @@ impl<'a> Linker for WasmLinker<'a> {
     }
 
     fn build_dylib(&mut self, _out_filename: &Path) {
-        bug!("building dynamic library is unsupported on Wasm")
+        self.cmd.arg("--dylib");
     }
 
     fn export_symbols(&mut self, tmpdir: &Path, crate_type: CrateType) {

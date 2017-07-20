@@ -275,7 +275,7 @@ pub fn invalid_output_for_target(sess: &Session,
                                  crate_type: config::CrateType) -> bool {
     match (sess.target.target.options.dynamic_linking,
            sess.target.target.options.executables, crate_type) {
-        (false, _, config::CrateTypeCdylib) |
+        //(false, _, config::CrateTypeCdylib) |
         (false, _, config::CrateTypeProcMacro) |
         (false, _, config::CrateTypeDylib) => true,
         (_, false, config::CrateTypeExecutable) => true,
