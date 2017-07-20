@@ -1,7 +1,7 @@
 [submodule "src/llvm"]
 	path = src/llvm
-	url = https://github.com/rust-lang/llvm.git
-	branch = master
+	url = https://github.com/vadimcn/llvm.git
+	branch = wasm
 [submodule "src/rt/hoedown"]
 	path = src/rt/hoedown
 	url = https://github.com/rust-lang/hoedown.git
@@ -32,4 +32,9 @@
 	url = https://github.com/rust-lang-nursery/rls.git
 [submodule "src/libcompiler_builtins"]
 	path = src/libcompiler_builtins
-	url = https://github.com/rust-lang-nursery/compiler-builtins
+	url = https://github.com/vadimcn/compiler-builtins
+	branch = wasm
+[submodule "src/lld"]
+	path = src/lld
+	url = https://github.com/vadimcn/lld.git
+	branch = wasm

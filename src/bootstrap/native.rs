@@ -93,6 +93,8 @@ pub fn llvm(build: &Build, target: &str) {
 
     let assertions = if build.config.llvm_assertions {"ON"} else {"OFF"};
 
+    let lld_source_dir = build.src.join("src/lld");
+
     cfg.target(target)
        .host(&build.build)
        .out_dir(&out_dir)
@@ -109,7 +111,8 @@ pub fn llvm(build: &Build, target: &str) {
        .define("LLVM_ENABLE_LIBEDIT", "OFF")
        .define("LLVM_PARALLEL_COMPILE_JOBS", build.jobs().to_string())
        .define("LLVM_TARGET_ARCH", target.split('-').next().unwrap())
-       .define("LLVM_DEFAULT_TARGET_TRIPLE", target);
+       .define("LLVM_DEFAULT_TARGET_TRIPLE", target)
+       .define("LLVM_EXTERNAL_LLD_SOURCE_DIR", lld_source_dir);
 
     if target.contains("msvc") {
         cfg.define("LLVM_USE_CRT_DEBUG", "MT");
