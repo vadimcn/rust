@@ -1161,6 +1161,7 @@ fn prepare_union_metadata(
 // offset of zero bytes).
 struct EnumMemberDescriptionFactory<'ll, 'tcx> {
     enum_type: Ty<'tcx>,
+    enum_type_size: Size,
     layout: TyLayout<'tcx>,
     discriminant_type_metadata: Option<&'ll DIType>,
     containing_scope: &'ll DIScope,
@@ -1222,7 +1223,7 @@ impl EnumMemberDescriptionFactory<'ll, 'tcx> {
                         name: "".to_string(),
                         type_metadata: variant_type_metadata,
                         offset: Size::ZERO,
-                        size: variant.size,
+                        size: self.enum_type_size,
                         align: variant.align,
                         flags: DIFlags::FlagZero
                     }
@@ -1508,6 +1509,7 @@ fn prepare_enum_metadata(
         enum_metadata,
         EnumMDF(EnumMemberDescriptionFactory {
             enum_type,
+            enum_type_size,
             layout,
             discriminant_type_metadata,
             containing_scope,
